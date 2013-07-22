@@ -181,7 +181,10 @@ CLI.prototype._left = function() {
 };
 
 CLI.prototype._right = function() {
-  this.editor.navigateRight(1);
+  var endOfLine = this._line(this._currRow()).length;
+  if(endOfLine > this._currCol()){
+    this.editor.navigateRight(1);
+  }
 };
 
 CLI.prototype._empty = function(optMsg) {
