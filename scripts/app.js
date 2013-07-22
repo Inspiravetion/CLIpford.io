@@ -9,16 +9,21 @@ window.onload = function(){
     var totalRows, startRow;
     totalRows = this._totalVisibleRowCapacity();
     startRow = this._currRow();
+    console.log(startRow);
 
     this._doc().removeLines(startRow + 1, this._doc().getLength());
-    while(this._line(this._topVisibleRow())){
+    while(this._line(this._topVisibleRow()) ||
+      !this._line(this._topVisibleRow() - 1).contains('clear')){ 
       this._log('');
     }
+    console.log(startRow);
+
     this.editor.moveCursorTo(startRow, 0);
   });
 
   cli.registerCommand('help', function(sFlgs, dFlgs, args){
     this._log('The following commands are supported:');
+    this._log('help');
     this._log('echo <some_message_to_echo>');
   });
 

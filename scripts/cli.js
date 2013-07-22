@@ -16,6 +16,13 @@ Object.defineProperty(String.prototype, 'startsWith', {
   }
 })
 
+Object.defineProperty(String.prototype, 'contains', {
+  value: function(str){
+    var verdict = this.search(str);
+    return verdict != -1;
+  }
+})
+
 var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
     Range       = require("ace/range").Range;
 
@@ -225,7 +232,7 @@ CLI.prototype.registerCommand = function(name, cmdFunc) {
 
 // Class variables---------------------
 
-CLI.prototype.prompt = 'charlie/lipford $>';
+CLI.prototype.prompt = '~/users/clip $>';
 
 CLI.prototype.cmdHistoryIndex = 0;
 
