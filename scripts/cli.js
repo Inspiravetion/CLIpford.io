@@ -25,6 +25,8 @@ var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
 var CLI = function(cliId){
 	this.editor = ace.edit(cliId);
   this._commandRegistry = {};
+  this._tabCommandRegistry = [];
+  this._totalRowCount = 0;
 	this._initStyling();
 	this._initKeyHandlers();
 };
@@ -41,7 +43,6 @@ CLI.prototype._writePrompt = function() {
 };
 
 CLI.prototype._inEditableArea = function() { 
-  console.log(this._currCol());
   return this.prompt.length < this._currCol();
 };
 
@@ -67,6 +68,18 @@ CLI.prototype._getCommand = function(optRow) {
   return this._line(row).replace(this.prompt, '').trim();
 };
 
+CLI.prototype._totalVisibleRowCapacity = function() {
+  return Math.floor(
+    this.editor.renderer.$size.height / this.editor.renderer.lineHeight
+  );
+};
+
+CLI.prototype._topVisibleRow = function() {
+  return Math.ceil(
+    this.editor.renderer.scrollTop / this.editor.renderer.lineHeight
+  );
+};
+
 CLI.prototype._log = function(msg) {
   this.editor.insert(msg);
   this._doc().insertNewLine(this.editor.getCursorPosition());
@@ -76,6 +89,7 @@ CLI.prototype._log = function(msg) {
 CLI.prototype._initKeyHandlers = function() {
 	this._bindKeys([
     { 'Return'   : this._return.bind(this) },
+    { 'Tab'      : this._tab.bind(this) },
     { 'Backspace': this._backspace.bind(this) },
 		{ 'Up'       : this._up.bind(this) }, 
 		{ 'Down'     : this._down.bind(this) },
@@ -102,6 +116,33 @@ CLI.prototype._return = function() {
   this.cmdHistoryIndex = 0;
 };
 
+CLI.prototype._tab = function() {
+  //right now only works for last word...should make it work on cursor
+  var orig, prfx, possibles, self, pos;
+  self = this;
+  pos = this.editor.getCursorPosition();
+  orig = this._getCommand();
+  prfx = orig.split(' ').pop();
+  possibles = [];
+  this._tabCommandRegistry.forEach(function(cmd){
+    if(cmd.startsWith(prfx)){
+      possibles.push(cmd);
+    }
+  });
+  if(possibles.length == 1){
+    this._replaceCommand(this.prompt + possibles[0]);
+  }
+  else if(possibles.length > 1){
+    //display horizontally instead of vertically
+    this._doc().insertNewLine(pos);
+    possibles.forEach(function(cmd){
+      self._log(cmd);
+    });
+    this._writePrompt();
+    this.editor.insert(orig);
+  }
+};
+
 CLI.prototype._backspace = function() {
 	if(this._inEditableArea()){
 		this.editor.remove("left");
@@ -123,7 +164,7 @@ CLI.prototype._up = function() {
 CLI.prototype._down = function() {
   if(this.cmdHistoryIndex == 1){
     this.cmdHistoryIndex--;
-    this._replaceCommand(this._cachedCommand);
+    this._replaceCommand(this.prompt + this._cachedCommand);
   }
   else if(this.cmdHistoryIndex > 1){
     this.cmdHistoryIndex--;
@@ -176,6 +217,7 @@ CLI.prototype._handleCommand = function(rawCmd) {
 
 CLI.prototype.registerCommand = function(name, cmdFunc) {
   this._commandRegistry[name] = cmdFunc; 
+  this._tabCommandRegistry.push(name); //still need to add path tab integration
 };
 
 // Class variables---------------------
