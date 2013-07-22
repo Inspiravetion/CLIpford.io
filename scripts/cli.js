@@ -2,11 +2,11 @@
 //-----------------------------------------------------------------------------
 
 var $ = function(sel){
-	return document.querySelector(sel);
+  return document.querySelector(sel);
 };
 
 var $$ = function(sel){
-	return document.querySelectorAll(sel);
+  return document.querySelectorAll(sel);
 };
 
 Object.defineProperty(String.prototype, 'startsWith', {
@@ -23,22 +23,22 @@ var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
 //-----------------------------------------------------------------------------
 
 var CLI = function(cliId){
-	this.editor = ace.edit(cliId);
+  this.editor = ace.edit(cliId);
   this._commandRegistry = {};
   this._tabCommandRegistry = [];
   this._totalRowCount = 0;
-	this._initStyling();
-	this._initKeyHandlers();
+  this._initStyling();
+  this._initKeyHandlers();
 };
 
 CLI.prototype._initStyling = function() {
-	this.editor.setTheme('ace/theme/monokai');
-	this.editor.renderer.setShowGutter(false);
-	this._writePrompt();
+  this.editor.setTheme('ace/theme/monokai');
+  this.editor.renderer.setShowGutter(false);
+  this._writePrompt();
 };
 
 CLI.prototype._writePrompt = function() {
-	var pos = this.editor.getCursorPosition(); 
+  var pos = this.editor.getCursorPosition(); 
   this.editor.getSession().insert(pos, this.prompt);
 };
 
@@ -87,32 +87,32 @@ CLI.prototype._log = function(msg) {
 
 // Key event handling------------------
 CLI.prototype._initKeyHandlers = function() {
-	this._bindKeys([
+  this._bindKeys([
     { 'Return'   : this._return.bind(this) },
     { 'Tab'      : this._tab.bind(this) },
     { 'Backspace': this._backspace.bind(this) },
-		{ 'Up'       : this._up.bind(this) }, 
-		{ 'Down'     : this._down.bind(this) },
-		{ 'Left'     : this._left.bind(this) },
-		{ 'Right'    : this._right.bind(this) }
-	])
+    { 'Up'       : this._up.bind(this) }, 
+    { 'Down'     : this._down.bind(this) },
+    { 'Left'     : this._left.bind(this) },
+    { 'Right'    : this._right.bind(this) }
+  ])
 };
 
 CLI.prototype._bindKeys = function(key_bindings) {
-	var handler = new HashHandler();
-	for(var i = 0; i < key_bindings.length; i++){
-		handler.bindKeys(key_bindings[i]);
-	}
-	this.editor.keyBinding.addKeyboardHandler(handler);
+  var handler = new HashHandler();
+  for(var i = 0; i < key_bindings.length; i++){
+    handler.bindKeys(key_bindings[i]);
+  }
+  this.editor.keyBinding.addKeyboardHandler(handler);
 };
 
 CLI.prototype._return = function() {
-	var pos, cmd;
+  var pos, cmd;
   pos = this.editor.getCursorPosition();
   cmd = this._getCommand();
-	this._doc().insertNewLine(pos);
-	this._handleCommand(cmd);
-	this._writePrompt();
+  this._doc().insertNewLine(pos);
+  this._handleCommand(cmd);
+  this._writePrompt();
   this.cmdHistoryIndex = 0;
 };
 
@@ -144,8 +144,8 @@ CLI.prototype._tab = function() {
 };
 
 CLI.prototype._backspace = function() {
-	if(this._inEditableArea()){
-		this.editor.remove("left");
+  if(this._inEditableArea()){
+    this.editor.remove("left");
   }
 };
 
@@ -188,10 +188,10 @@ CLI.prototype._right = function() {
 };
 
 CLI.prototype._empty = function(optMsg) {
-	return function(){
-		if(optMsg)
-			console.log(optMsg)
-	}
+  return function(){
+    if(optMsg)
+      console.log(optMsg)
+  }
 };
 
 CLI.prototype._replaceCommand = function(optCmd) {

@@ -1,19 +1,19 @@
 window.onload = function(){
-	var cli = new CLI('cli');
+  var cli = new CLI('cli');
 
-	cli.registerCommand('echo', function(sFlgs, dFlgs, args){
+  cli.registerCommand('echo', function(sFlgs, dFlgs, args){
     this._log(args);
   });
 
-	cli.registerCommand('clear', function(sFlgs, dFlgs, args){
-		var totalRows, startRow;
-		totalRows = this._totalVisibleRowCapacity();
-		startRow = this._currRow();
+  cli.registerCommand('clear', function(sFlgs, dFlgs, args){
+    var totalRows, startRow;
+    totalRows = this._totalVisibleRowCapacity();
+    startRow = this._currRow();
 
-		this._doc().removeLines(startRow + 1, this._doc().getLength());
-  	while(this._line(this._topVisibleRow())){
-  		this._log('');
-  	}
+    this._doc().removeLines(startRow + 1, this._doc().getLength());
+    while(this._line(this._topVisibleRow())){
+      this._log('');
+    }
     this.editor.moveCursorTo(startRow, 0);
   });
 
@@ -23,8 +23,8 @@ window.onload = function(){
   });
 
   /*
-	 * Notes:
-	 * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action
-	 * 2.need to integrate color for easy recognition of prompt, user command, and logging
+   * Notes:
+   * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action
+   * 2.need to integrate color for easy recognition of prompt, user command, and logging
    */
 }
