@@ -18,8 +18,8 @@ Object.defineProperty(String.prototype, 'startsWith', {
 
 Object.defineProperty(String.prototype, 'contains', {
   value: function(str){
-    var verdict = this.search(str);
-    return verdict != -1;
+    var index = this.search(str);
+    return index != -1;
   }
 })
 
@@ -95,13 +95,13 @@ CLI.prototype._log = function(msg) {
 // Key event handling------------------
 CLI.prototype._initKeyHandlers = function() {
   this._bindKeys([
-    { 'Return'   : this._return.bind(this) },
-    { 'Tab'      : this._tab.bind(this) },
+    { 'Return'   : this._return.bind(this)    },
+    { 'Tab'      : this._tab.bind(this)       },
     { 'Backspace': this._backspace.bind(this) },
-    { 'Up'       : this._up.bind(this) }, 
-    { 'Down'     : this._down.bind(this) },
-    { 'Left'     : this._left.bind(this) },
-    { 'Right'    : this._right.bind(this) }
+    { 'Up'       : this._up.bind(this)        }, 
+    { 'Down'     : this._down.bind(this)      },
+    { 'Left'     : this._left.bind(this)      },
+    { 'Right'    : this._right.bind(this)     }
   ])
 };
 
@@ -215,14 +215,34 @@ CLI.prototype._replaceCommand = function(optCmd) {
 
 // Command handling--------------------
 
-//gotta do flag logic******
 CLI.prototype._handleCommand = function(rawCmd) {
-  var cmdArr, cmd;
+  var cmdArr, cmd, sFlags, dFlags, args, parts;
   cmdArr = rawCmd.split(' ');
-  cmd = cmdArr.shift();
+  cmd    = cmdArr.shift();
+  parts  = this._sortCommandParams(cmdArr);
+  sFlags = parts.sFlags;
+  dFlags = parts.dFlags;
+  args   = parts.args.join(' ');
   if(this._commandRegistry[cmd]){
-    this._commandRegistry[cmd].call(this, null, null, cmdArr.join(' '));
+    this._commandRegistry[cmd].call(this, sFlags, dFlags, args);
   }
+};
+
+CLI.prototype._sortCommandParams = function(paramArr) {
+  var sFlags = {}, dFlags = {}, args = [];
+  for(var i = 0; i < paramArr.length; i++){
+    if(this._dFlagRegex.test(paramArr[i])){ //make this smarter...check if user fucked up
+      dFlags[paramArr[i]] = paramArr[i + 1];
+      i++;
+    }
+    else if(this._sFlagRegex.test(paramArr[i])){
+      sFlags[paramArr[i]] = true;
+    }
+    else{
+      args.push(paramArr[i])
+    }
+  }
+  return { 'sFlags' : sFlags, 'dFlags' : dFlags, 'args' : args };
 };
 
 CLI.prototype.registerCommand = function(name, cmdFunc) {
@@ -237,3 +257,7 @@ CLI.prototype.prompt = '~/users/clip $>';
 CLI.prototype.cmdHistoryIndex = 0;
 
 CLI.prototype._cachedCommand = '';
+
+CLI.prototype._sFlagRegex = new RegExp('^(?:\-)(\w*)');
+
+CLI.prototype._dFlagRegex = new RegExp('^(?:\-\-)(\w*)');
