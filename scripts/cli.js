@@ -23,6 +23,13 @@ Object.defineProperty(String.prototype, 'contains', {
   }
 })
 
+Object.defineProperty(Array.prototype, 'contains', {
+  value: function(obj){
+    var index = this.indexOf(obj);
+    return index != -1;
+  }
+})
+
 var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
     Range       = require("ace/range").Range;
 
@@ -216,37 +223,53 @@ CLI.prototype._replaceCommand = function(optCmd) {
 // Command handling--------------------
 
 CLI.prototype._handleCommand = function(rawCmd) {
-  var cmdArr, cmd, sFlags, dFlags, args, parts;
-  cmdArr = rawCmd.split(' ');
-  cmd    = cmdArr.shift();
-  parts  = this._sortCommandParams(cmdArr);
-  sFlags = parts.sFlags;
-  dFlags = parts.dFlags;
-  args   = parts.args.join(' ');
-  if(this._commandRegistry[cmd]){
-    this._commandRegistry[cmd].call(this, sFlags, dFlags, args);
+  var cmdArr, cmdName, sFlags, dFlags, args, parts;
+  cmdArr  = rawCmd.split(' ');
+  cmdName = cmdArr.shift();
+  parts   = this._sortCommandParams(cmdName, cmdArr);
+  sFlags  = parts.sFlags;
+  dFlags  = parts.dFlags;
+  args    = parts.args.join(' ');
+  if(this._commandRegistry[cmdName]){
+    this._commandRegistry[cmdName].cmd.call(this, sFlags, dFlags, args);
   }
 };
 
-CLI.prototype._sortCommandParams = function(paramArr) {
+CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
   var sFlags = {}, dFlags = {}, args = [];
   for(var i = 0; i < paramArr.length; i++){
-    if(this._dFlagRegex.test(paramArr[i])){ //make this smarter...check if user fucked up
-      dFlags[paramArr[i]] = paramArr[i + 1];
-      i++;
+    if(this._dFlagRegex.test(paramArr[i])){
+      if(this._commandRegistry[cmdName].dFlags.contains(paramArr[i])){ 
+        dFlags[paramArr[i]] = paramArr[i + 1];
+        i++;
+      } 
+      else {
+        throw ('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+      }
     }
     else if(this._sFlagRegex.test(paramArr[i])){
-      sFlags[paramArr[i]] = true;
-    }
-    else{
+      if(this._commandRegistry[cmdName].sFlags.contains(paramArr[i])){
+        sFlags[paramArr[i]] = true;
+      } 
+      else {
+        throw ('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+      }
+    } 
+    else {
       args.push(paramArr[i])
     }
   }
   return { 'sFlags' : sFlags, 'dFlags' : dFlags, 'args' : args };
 };
 
-CLI.prototype.registerCommand = function(name, cmdFunc) {
-  this._commandRegistry[name] = cmdFunc; 
+CLI.prototype.registerCommand = function(name, sFlags, dFlags, usage, cmdFunc, description) {
+  this._commandRegistry[name] = {
+    'cmd'         : cmdFunc,
+    'sFlags'      : sFlags,
+    'dFlags'      : dFlags,
+    'usage'       : usage,
+    'description' : description
+  } 
   this._tabCommandRegistry.push(name); //still need to add path tab integration
 };
 
