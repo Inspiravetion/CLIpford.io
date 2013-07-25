@@ -25,6 +25,14 @@ Object.defineProperty(String.prototype, 'contains', {
 
 Object.defineProperty(Array.prototype, 'contains', {
   value: function(obj){
+    if(typeof obj == 'function'){
+      for(var i = 0; i < this.length; i++){
+        if(obj(this[i])){
+          return true;
+        }
+      }
+      return false;
+    }  
     var index = this.indexOf(obj);
     return index != -1;
   }
@@ -223,54 +231,51 @@ CLI.prototype._replaceCommand = function(optCmd) {
 // Command handling--------------------
 
 CLI.prototype._handleCommand = function(rawCmd) {
-  var cmdArr, cmdName, sFlags, dFlags, args, parts;
+  var cmdArr, cmdName, sFlags, lFlags, args, parts;
   cmdArr  = rawCmd.split(' ');
   cmdName = cmdArr.shift();
+  this._validCommand = true;
   parts   = this._sortCommandParams(cmdName, cmdArr);
   sFlags  = parts.sFlags;
-  dFlags  = parts.dFlags;
+  lFlags  = parts.lFlags;
   args    = parts.args.join(' ');
-  if(this._commandRegistry[cmdName]){
-    this._commandRegistry[cmdName].cmd.call(this, sFlags, dFlags, args);
+  if(this._commandRegistry[cmdName] && this._validCommand){
+    this._commandRegistry[cmdName].cmd.call(this, sFlags, lFlags, args);
   }
 };
 
 CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
-  var sFlags = {}, dFlags = {}, args = [];
+  var sFlags = {}, lFlags = {}, args = [];
   for(var i = 0; i < paramArr.length; i++){
     if(this._dFlagRegex.test(paramArr[i])){
-      if(this._commandRegistry[cmdName].dFlags.contains(paramArr[i])){ 
-        dFlags[paramArr[i]] = paramArr[i + 1];
+      if(this._commandRegistry[cmdName].hasFlag(paramArr[i])){ 
+        lFlags[paramArr[i]] = paramArr[i + 1];
         i++;
       } 
       else {
-        throw ('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+        this._log('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+        this._validCommand = false;
       }
     }
     else if(this._sFlagRegex.test(paramArr[i])){
-      if(this._commandRegistry[cmdName].sFlags.contains(paramArr[i])){
+      if(this._commandRegistry[cmdName].hasFlag(paramArr[i])){
         sFlags[paramArr[i]] = true;
       } 
       else {
-        throw ('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+        this._log('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+        this._validCommand = false;
       }
     } 
     else {
       args.push(paramArr[i])
     }
   }
-  return { 'sFlags' : sFlags, 'dFlags' : dFlags, 'args' : args };
+  return { 'sFlags' : sFlags, 'lFlags' : lFlags, 'args' : args };
 };
 
-CLI.prototype.registerCommand = function(name, sFlags, dFlags, usage, cmdFunc, description) {
-  this._commandRegistry[name] = {
-    'cmd'         : cmdFunc,
-    'sFlags'      : sFlags,
-    'dFlags'      : dFlags,
-    'usage'       : usage,
-    'description' : description
-  } 
+CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
   this._tabCommandRegistry.push(name); //still need to add path tab integration
+  return this._commandRegistry[name] = new Command(cmdFunc, usage, description);
 };
 
 // Class variables---------------------
@@ -284,3 +289,29 @@ CLI.prototype._cachedCommand = '';
 CLI.prototype._sFlagRegex = new RegExp('^(?:\-)(\w*)');
 
 CLI.prototype._dFlagRegex = new RegExp('^(?:\-\-)(\w*)');
+
+// Inner Classes
+//-----------------------------------------------------------------------------
+
+var Command = function(cmdFunc, usage, description, flags){
+  this.flags       = flags || [];
+  this.usage       = usage;
+  this.description = description;
+  this.cmd         = cmdFunc;
+};
+
+Command.prototype.withFlags = function(flagArr) {
+  this.flags = flagArr || [];
+};
+
+Command.prototype.hasFlag = function(flagStr) {
+  return this.flags.contains(function(flag){
+    return flag.short == flagStr || flag.long == flagStr;
+  });
+};
+
+var Flag = function(short, long, description){
+  this.short       = short;
+  this.long        = long;
+  this.description = description;
+};

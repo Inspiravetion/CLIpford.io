@@ -3,17 +3,23 @@ window.onload = function(){
 
   /* Echo */
   cli.registerCommand(
-    'echo', ['-t'], ['--test'], 'echo <message to echo>',
-    function(sFlgs, dFlgs, args){
+    'echo', 
+    function(sFlgs, lFlgs, args){
+      console.log(sFlgs);
+      console.log(lFlgs);
       this._log(args);
-    },
+    }, 
+    'echo <message to echo>',
     'Prints out the given message'
-  );
+  ).withFlags([ 
+    new Flag('-t', '--test', 'Just a test flag'),
+    new Flag('-c', '--cassandra', 'My Baybeeehh')
+  ]);
 
   /* Clear */
   cli.registerCommand(
-    'clear', [], [], 'clear',
-    function(sFlgs, dFlgs, args){
+    'clear', 
+    function(sFlgs, lFlgs, args){
       var totalRows, startRow;
       totalRows = this._totalVisibleRowCapacity();
       startRow = this._currRow();
@@ -24,46 +30,49 @@ window.onload = function(){
       }
       this.editor.moveCursorTo(startRow, 0);
     },
+    'clear',
     'Clears recent commands from view'
   );
 
   /* Help */ //add indentation and space to make more readable
   cli.registerCommand(
-    'help', [], [], 'help [command]',
-    function(sFlgs, dFlgs, args){
+    'help', 
+    function(sFlgs, lFlgs, args){
       //make this smart based off of command info given
     },
+    'help [command]',
     'Prints command usage info'
   );
 
   /* Cd */
   cli.registerCommand(
-    'cd', [], [], '', function(sFlgs, dFlgs, args){}, ''
+    'cd', function(sFlgs, lFlgs, args){}, '', ''
   );
 
   /* Ls */
   cli.registerCommand(
-    'ls', [], [], '', function(sFlgs, dFlgs, args){}, ''
+    'ls', function(sFlgs, lFlgs, args){}, '', ''
   );
 
   /* Vim */
   cli.registerCommand(
-    'vim', [], [], '', function(sFlgs, dFlgs, args){}, ''
+    'vim', function(sFlgs, lFlgs, args){}, '', ''
   );
 
   /* Repl */
   cli.registerCommand(
-    'repl', [], [], '', function(sFlgs, dFlgs, args){}, ''
+    'repl', function(sFlgs, lFlgs, args){}, '', ''
   );
 
   /* Run */
   cli.registerCommand(
-    'run', [], [], '', function(sFlgs, dFlgs, args){}, ''
+    'run', function(sFlgs, lFlgs, args){}, '', ''
   );
 
   /*
    * Notes:
    * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action
    * 2.need to integrate color for easy recognition of prompt, user command, and logging
+   * 3.format strings with spacing so that they can be equally spaced
    */
 }
