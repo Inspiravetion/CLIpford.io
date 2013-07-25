@@ -38,7 +38,16 @@ window.onload = function(){
   cli.registerCommand(
     'help', 
     function(sFlgs, lFlgs, args){
-      //make this smart based off of command info given
+      if(args.length){
+        args.forEach(function(cmd){
+          this._log(this._commandRegistry[cmd].toString());
+        }.bind(this));
+      }
+      else {
+        for(cmd in this._commandRegistry){
+          this._log(this._commandRegistry[cmd].usage);
+        }
+      }
     },
     'help [command]',
     'Prints command usage info'

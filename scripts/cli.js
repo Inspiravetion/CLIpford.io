@@ -238,7 +238,7 @@ CLI.prototype._handleCommand = function(rawCmd) {
   parts   = this._sortCommandParams(cmdName, cmdArr);
   sFlags  = parts.sFlags;
   lFlags  = parts.lFlags;
-  args    = parts.args.join(' ');
+  args    = parts.args;
   if(this._commandRegistry[cmdName] && this._validCommand){
     this._commandRegistry[cmdName].cmd.call(this, sFlags, lFlags, args);
   }
@@ -310,8 +310,32 @@ Command.prototype.hasFlag = function(flagStr) {
   });
 };
 
+Command.prototype.toString = function() {
+  var str = '';
+  str += this.usage + '\n\n';
+  this.flags.forEach(function(flag){
+    str += flag.toString() + '\n';
+  });
+  return str;
+};
+
 var Flag = function(short, long, description){
   this.short       = short;
   this.long        = long;
   this.description = description;
+};
+
+Flag.prototype.toString = function() {
+  var str = '';
+  if(this.short && this.long){
+    str += this.short + ' , ' + this.long;
+  }
+  else if(this.short){
+    str += this.short;
+  }
+  else if(this.long){
+    str += this.long;
+  }
+  str += '\t' + this.description;
+  return str;
 };
