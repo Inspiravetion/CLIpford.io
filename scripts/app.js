@@ -5,15 +5,15 @@ window.onload = function(){
   cli.registerCommand(
     'echo', 
     function(sFlgs, lFlgs, args){
-      console.log(sFlgs);
-      console.log(lFlgs);
-      this._log(args);
+      this._log(args.join(' '));
     }, 
     'echo <message to echo>',
     'Prints out the given message'
   ).withFlags([ 
     new Flag('-t', '--test', 'Just a test flag'),
-    new Flag('-c', '--cassandra', 'My Baybeeehh')
+    new Flag('-c', '--cassandra', 'My Baybeeehh'),
+    new Flag('-d', '', 'DISSS DICK'),
+    new Flag('', '--Atrak', 'GOOOOOOO DJ...thats my DJ')
   ]);
 
   /* Clear */
@@ -28,7 +28,7 @@ window.onload = function(){
         !this._line(this._topVisibleRow() - 1).contains('clear')){ 
         this._log('');
       }
-      this.editor.moveCursorTo(startRow, 0);
+      this._editor.moveCursorTo(startRow, 0);
     },
     'clear',
     'Clears recent commands from view'

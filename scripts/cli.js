@@ -9,19 +9,38 @@ var $$ = function(sel){
   return document.querySelectorAll(sel);
 };
 
+var getPadding = function(num, char){
+  var padding = '';
+  char = char || ' ';
+  for(var i = 0; i < num; i++){
+    padding += char;
+  }
+  return padding;
+}
+
 Object.defineProperty(String.prototype, 'startsWith', {
   value: function(str){
-    var sub = this.substr(0, str.length);
-    return sub == str;
+    return this.substr(0, str.length) == str;
   }
-})
+});
 
 Object.defineProperty(String.prototype, 'contains', {
   value: function(str){
-    var index = this.search(str);
-    return index != -1;
+    return this.search(str) != -1;
   }
-})
+});
+
+Object.defineProperty(String.prototype, 'padFront', {
+  value: function(num, char){
+    return getPadding(num, char) + this;
+  }
+});
+
+Object.defineProperty(String.prototype, 'padBack', {
+  value: function(num, char){
+    return this + getPadding(num, char);
+  }
+});
 
 Object.defineProperty(Array.prototype, 'contains', {
   value: function(obj){
@@ -32,11 +51,10 @@ Object.defineProperty(Array.prototype, 'contains', {
         }
       }
       return false;
-    }  
-    var index = this.indexOf(obj);
-    return index != -1;
+    }
+    return this.indexOf(obj) != -1;
   }
-})
+});
 
 var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
     Range       = require("ace/range").Range;
@@ -45,66 +63,70 @@ var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
 //-----------------------------------------------------------------------------
 
 var CLI = function(cliId){
-  this.editor = ace.edit(cliId);
-  this._commandRegistry = {};
+  this._sFlagRegex         = new RegExp('^(?:\-)(\w*)');
+  this._dFlagRegex         = new RegExp('^(?:\-\-)(\w*)');
+  this._prompt             = '~/users/clip $>';
+  this._cmdHistoryIndex    = 0;
+  this._cachedCommand      = '';
+  this._commandRegistry    = {};
   this._tabCommandRegistry = [];
-  this._totalRowCount = 0;
+  this._editor              = ace.edit(cliId);
   this._initStyling();
   this._initKeyHandlers();
 };
 
 CLI.prototype._initStyling = function() {
-  this.editor.setTheme('ace/theme/monokai');
-  this.editor.renderer.setShowGutter(false);
+  this._editor.setTheme('ace/theme/monokai');
+  this._editor.renderer.setShowGutter(false);
   this._writePrompt();
 };
 
 CLI.prototype._writePrompt = function() {
-  var pos = this.editor.getCursorPosition(); 
-  this.editor.getSession().insert(pos, this.prompt);
+  var pos = this._editor.getCursorPosition(); 
+  this._editor.getSession().insert(pos, this._prompt);
 };
 
 CLI.prototype._inEditableArea = function() { 
-  return this.prompt.length < this._currCol();
+  return this._prompt.length < this._currCol();
 };
 
 CLI.prototype._doc = function() {
-  return this.editor.getSession().getDocument();
+  return this._editor.getSession().getDocument();
 };
 
 CLI.prototype._line = function(row) {
-  return this.editor.getSession().getLine(row);
+  return this._editor.getSession().getLine(row);
 };
 
 CLI.prototype._currRow = function() {
-  return this.editor.getCursorPosition().row; //this is wrong on scroll
+  return this._editor.getCursorPosition().row; //this is wrong on scroll
 };
 
 CLI.prototype._currCol = function() {
-  return this.editor.getCursorPosition().column;
+  return this._editor.getCursorPosition().column;
 };
 
 CLI.prototype._getCommand = function(optRow) {
   var row, cmd;
   row = optRow || (optRow == 0 ? 0 : this._currRow());
-  return this._line(row).replace(this.prompt, '').trim();
+  return this._line(row).replace(this._prompt, '').trim();
 };
 
 CLI.prototype._totalVisibleRowCapacity = function() {
   return Math.floor(
-    this.editor.renderer.$size.height / this.editor.renderer.lineHeight
+    this._editor.renderer.$size.height / this._editor.renderer.lineHeight
   );
 };
 
 CLI.prototype._topVisibleRow = function() {
   return Math.ceil(
-    this.editor.renderer.scrollTop / this.editor.renderer.lineHeight
+    this._editor.renderer.scrollTop / this._editor.renderer.lineHeight
   );
 };
 
 CLI.prototype._log = function(msg) {
-  this.editor.insert(msg);
-  this._doc().insertNewLine(this.editor.getCursorPosition());
+  this._editor.insert(msg);
+  this._doc().insertNewLine(this._editor.getCursorPosition());
 };
 
 // Key event handling------------------
@@ -125,24 +147,24 @@ CLI.prototype._bindKeys = function(key_bindings) {
   for(var i = 0; i < key_bindings.length; i++){
     handler.bindKeys(key_bindings[i]);
   }
-  this.editor.keyBinding.addKeyboardHandler(handler);
+  this._editor.keyBinding.addKeyboardHandler(handler);
 };
 
 CLI.prototype._return = function() {
   var pos, cmd;
-  pos = this.editor.getCursorPosition();
+  pos = this._editor.getCursorPosition();
   cmd = this._getCommand();
   this._doc().insertNewLine(pos);
   this._handleCommand(cmd);
   this._writePrompt();
-  this.cmdHistoryIndex = 0;
+  this._cmdHistoryIndex = 0;
 };
 
 CLI.prototype._tab = function() {
   //right now only works for last word...should make it work on cursor
   var orig, prfx, possibles, self, pos;
   self = this;
-  pos = this.editor.getCursorPosition();
+  pos = this._editor.getCursorPosition();
   orig = this._getCommand();
   prfx = orig.split(' ').pop();
   possibles = [];
@@ -152,7 +174,7 @@ CLI.prototype._tab = function() {
     }
   });
   if(possibles.length == 1){
-    this._replaceCommand(this.prompt + possibles[0]);
+    this._replaceCommand(this._prompt + possibles[0]);
   }
   else if(possibles.length > 1){
     //display horizontally instead of vertically
@@ -161,22 +183,22 @@ CLI.prototype._tab = function() {
       self._log(cmd);
     });
     this._writePrompt();
-    this.editor.insert(orig);
+    this._editor.insert(orig);
   }
 };
 
 CLI.prototype._backspace = function() {
   if(this._inEditableArea()){
-    this.editor.remove("left");
+    this._editor.remove("left");
   }
 };
 
 CLI.prototype._up = function() { 
-  if(this.cmdHistoryIndex != this._doc().getLength() - 1){
-    if(this.cmdHistoryIndex == 0){
+  if(this._cmdHistoryIndex != this._doc().getLength() - 1){
+    if(this._cmdHistoryIndex == 0){
       this._cachedCommand = this._getCommand();
     }
-    this.cmdHistoryIndex++;
+    this._cmdHistoryIndex++;
     if(!this._replaceCommand()){
       this._up();
     }
@@ -184,12 +206,12 @@ CLI.prototype._up = function() {
 };
 
 CLI.prototype._down = function() {
-  if(this.cmdHistoryIndex == 1){
-    this.cmdHistoryIndex--;
-    this._replaceCommand(this.prompt + this._cachedCommand);
+  if(this._cmdHistoryIndex == 1){
+    this._cmdHistoryIndex--;
+    this._replaceCommand(this._prompt + this._cachedCommand);
   }
-  else if(this.cmdHistoryIndex > 1){
-    this.cmdHistoryIndex--;
+  else if(this._cmdHistoryIndex > 1){
+    this._cmdHistoryIndex--;
     if(!this._replaceCommand()){
       this._down();
     }
@@ -198,14 +220,14 @@ CLI.prototype._down = function() {
 
 CLI.prototype._left = function() {
   if(this._inEditableArea()){
-    this.editor.navigateLeft(1);
+    this._editor.navigateLeft(1);
   }
 };
 
 CLI.prototype._right = function() {
   var endOfLine = this._line(this._currRow()).length;
   if(endOfLine > this._currCol()){
-    this.editor.navigateRight(1);
+    this._editor.navigateRight(1);
   }
 };
 
@@ -219,10 +241,10 @@ CLI.prototype._empty = function(optMsg) {
 CLI.prototype._replaceCommand = function(optCmd) {
   var cmd, rng; 
   cmd = optCmd || (optCmd == '' ? '' : 
-    this._line(this._currRow() - this.cmdHistoryIndex));
-  rng = new Range(this._currRow(), this.prompt.length, this._currRow(), 10000);
-  if(cmd.startsWith(this.prompt)){
-    this._doc().replace(rng, cmd.replace(this.prompt, '').trim());
+    this._line(this._currRow() - this._cmdHistoryIndex));
+  rng = new Range(this._currRow(), this._prompt.length, this._currRow(), 10000);
+  if(cmd.startsWith(this._prompt)){
+    this._doc().replace(rng, cmd.replace(this._prompt, '').trim());
     return true;
   }
   return false;
@@ -278,30 +300,24 @@ CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
   return this._commandRegistry[name] = new Command(cmdFunc, usage, description);
 };
 
-// Class variables---------------------
-
-CLI.prototype.prompt = '~/users/clip $>';
-
-CLI.prototype.cmdHistoryIndex = 0;
-
-CLI.prototype._cachedCommand = '';
-
-CLI.prototype._sFlagRegex = new RegExp('^(?:\-)(\w*)');
-
-CLI.prototype._dFlagRegex = new RegExp('^(?:\-\-)(\w*)');
-
 // Inner Classes
 //-----------------------------------------------------------------------------
 
-var Command = function(cmdFunc, usage, description, flags){
-  this.flags       = flags || [];
-  this.usage       = usage;
-  this.description = description;
-  this.cmd         = cmdFunc;
+var Command = function(cmdFunc, usage, description){
+  this.flags          = null;
+  this.usage          = usage;
+  this.description    = description;
+  this.cmd            = cmdFunc;
+  this.maxFlagNameLen = 0;
 };
 
 Command.prototype.withFlags = function(flagArr) {
   this.flags = flagArr || [];
+  this.flags.forEach(function(flag){
+    if(flag.length() > this.maxFlagNameLen){
+      this.maxFlagNameLen = flag.length();
+    }
+  }.bind(this));
 };
 
 Command.prototype.hasFlag = function(flagStr) {
@@ -313,28 +329,39 @@ Command.prototype.hasFlag = function(flagStr) {
 Command.prototype.toString = function() {
   var str = '';
   str += this.usage + '\n\n';
-  this.flags.forEach(function(flag){
-    str += flag.toString() + '\n';
-  });
+  if(this.flags){
+    this.flags.forEach(function(flag){
+      str += flag.toString(this.maxFlagNameLen) + '\n';
+    }.bind(this));
+  }
   return str;
 };
 
 var Flag = function(short, long, description){
-  this.short       = short;
-  this.long        = long;
-  this.description = description;
+  this.short       = short || '';
+  this.long        = long || '';
+  this.description = description || '';
 };
 
-Flag.prototype.toString = function() {
-  var str = '';
+Flag.prototype.length = function() {
+  if(this.long && this.short){
+    return this.short.length + this.long.length + 3; // ' , '.length
+  }
+  return this.short.length || this.long.length;
+};
+
+Flag.prototype.toString = function(maxLen) {
+  var str = '',
+  pad = maxLen - this.length();
+  console.log(maxLen);
   if(this.short && this.long){
-    str += this.short + ' , ' + this.long;
+    str += (this.short + ' , ' + this.long).padBack(pad);
   }
   else if(this.short){
-    str += this.short;
+    str += this.short.padBack(pad);
   }
   else if(this.long){
-    str += this.long;
+    str += this.long.padBack(pad);
   }
   str += '\t' + this.description;
   return str;
