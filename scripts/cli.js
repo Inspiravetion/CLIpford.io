@@ -70,7 +70,7 @@ var CLI = function(cliId){
   this._cachedCommand      = '';
   this._commandRegistry    = {};
   this._tabCommandRegistry = [];
-  this._editor              = ace.edit(cliId);
+  this._editor             = ace.edit(cliId);
   this._initStyling();
   this._initKeyHandlers();
 };
@@ -129,6 +129,16 @@ CLI.prototype._log = function(msg) {
   this._doc().insertNewLine(this._editor.getCursorPosition());
 };
 
+CLI.prototype._width = function() {
+  return Math.floor(
+    this._editor.renderer.$size.width / this._editor.renderer.characterWidth
+  );
+};
+
+CLI.prototype._height = function() {
+  return this._editor.renderer.$size.height;
+};
+
 // Key event handling------------------
 CLI.prototype._initKeyHandlers = function() {
   this._bindKeys([
@@ -178,10 +188,11 @@ CLI.prototype._tab = function() {
   }
   else if(possibles.length > 1){
     //display horizontally instead of vertically
-    this._doc().insertNewLine(pos);
-    possibles.forEach(function(cmd){
-      self._log(cmd);
-    });
+    // this._doc().insertNewLine(pos);
+    // possibles.forEach(function(cmd){
+    //   self._log(cmd);
+    // });
+    this._prettyPrint(possibles);
     this._writePrompt();
     this._editor.insert(orig);
   }
@@ -248,6 +259,32 @@ CLI.prototype._replaceCommand = function(optCmd) {
     return true;
   }
   return false;
+};
+
+CLI.prototype._prettyPrint = function(argArr) {
+  var width, gutter, maxStrLen, colWidth, colCount, row;
+  maxStrLen = 0;
+  gutter    = '\t';
+  width     = this._width();
+  row       = '';
+  
+  argArr.forEach(function(str){
+    if(str.length > maxStrLen){
+      maxStrLen = str.length;
+    }
+  });
+
+  colCount = Math.floor(width / (maxStrLen + gutter.length));
+
+  this._log('');
+  for(var i = 0; i < argArr.length; i++){
+    if(i != 0 && i % colCount == 0){ 
+      this._log(row);
+      row = '';
+    }
+    row += argArr[i].padBack(maxStrLen - argArr[i].length) + gutter;
+  }
+  this._log(row);
 };
 
 // Command handling--------------------
@@ -353,7 +390,6 @@ Flag.prototype.length = function() {
 Flag.prototype.toString = function(maxLen) {
   var str = '',
   pad = maxLen - this.length();
-  console.log(maxLen);
   if(this.short && this.long){
     str += (this.short + ' , ' + this.long).padBack(pad);
   }

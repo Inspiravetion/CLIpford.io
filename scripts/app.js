@@ -78,6 +78,22 @@ window.onload = function(){
     'run', function(sFlgs, lFlgs, args){}, '', ''
   );
 
+  cli.registerCommand(
+    'runasfasf', function(sFlgs, lFlgs, args){}, '', ''
+  );
+
+  cli.registerCommand(
+    'ruaaaassdfn', function(sFlgs, lFlgs, args){}, '', ''
+  );
+
+  cli.registerCommand(
+    'russfasfasfasfasdfn', function(sFlgs, lFlgs, args){}, '', ''
+  );
+
+  cli.registerCommand(
+    'ruasdafasfasfafasfafasfadfsn', function(sFlgs, lFlgs, args){}, '', ''
+  );
+
   /*
    * Notes:
    * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action
