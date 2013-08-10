@@ -5,7 +5,7 @@ window.onload = function(){
   cli.registerCommand(
     'echo', 
     function(sFlgs, lFlgs, args){
-      this._log(args.join(' '));
+      this._log(args.join(' '), '.green');
     }, 
     'echo <message to echo>',
     'Prints out the given message'
@@ -55,7 +55,40 @@ window.onload = function(){
 
   /* Cd */
   cli.registerCommand(
-    'cd', function(sFlgs, lFlgs, args){}, '', ''
+    'cd', 
+    function(sFlgs, lFlgs, args){
+      var newPath, currPath, success;
+      currPath = this._route.split('/');
+      newPath  = args[0];
+
+      if(newPath){
+        if (newPath.startsWith('..')){
+          while(newPath.startsWith('..')){
+            currPath.pop();
+            newPath = newPath.substr(3);
+          }
+          newPath = currPath.join('/') + (newPath ? '/' + newPath : '');
+        }
+        else if (newPath.startsWith('.')){
+          newPath = this._route + newPath.substr(1);
+        }
+
+        if(newPath.endsWith('/')){
+          newPath = newPath.substr(0, newPath.length - 1);
+        }
+      }
+
+      if(newPath && this._validateRoute(newPath)){
+        this._route = newPath;
+        this._navigateTo(this._route);
+        this._log(this._route);
+      }
+      else {
+        this._log('ERROR: You specified a path that does not exist');
+      }
+    }, 
+    'cd [relative | absolute path]', 
+    'Navigates you through the site pages'
   );
 
   /* Ls */
@@ -78,26 +111,9 @@ window.onload = function(){
     'run', function(sFlgs, lFlgs, args){}, '', ''
   );
 
-  cli.registerCommand(
-    'runasfasf', function(sFlgs, lFlgs, args){}, '', ''
-  );
-
-  cli.registerCommand(
-    'ruaaaassdfn', function(sFlgs, lFlgs, args){}, '', ''
-  );
-
-  cli.registerCommand(
-    'russfasfasfasfasdfn', function(sFlgs, lFlgs, args){}, '', ''
-  );
-
-  cli.registerCommand(
-    'ruasdafasfasfafasfafasfadfsn', function(sFlgs, lFlgs, args){}, '', ''
-  );
-
   /*
    * Notes:
    * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action
    * 2.need to integrate color for easy recognition of prompt, user command, and logging
-   * 3.format strings with spacing so that they can be equally spaced
    */
 }

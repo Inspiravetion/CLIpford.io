@@ -7709,14 +7709,34 @@ var Tokenizer = function(rules, flag) {
 
                 rule = state[mapping[i].rule];
 
-                if (mapping[i].len > 1)
-                    value = match.slice(i+2, i+1+mapping[i].len);
+                //---------------------------------------------------------------
+                // Here is the solution... Charlie Lipford
+                //---------------------------------------------------------------
+                rule = {
+                    token : function(val){
+                        console.log('token func:');
+                        console.log(val);
+                        return 'charlie';
+                    },
+                    regex : '{{(.*)}}'
+                };
+                //---------------------------------------------------------------
+                // Here is the solution... Charlie Lipford
+                //---------------------------------------------------------------
 
+                if (mapping[i].len > 1){
+                    console.log('about to set new value');
+                    value = match.slice(i+2, i+1+mapping[i].len);
+                }
                 // compute token type
-                if (typeof rule.token == "function")
+                if (typeof rule.token == "function") {
                     type = rule.token.apply(this, value);
-                else
+                    value = [value[0].replace(new RegExp(rule.regex), '')];
+                    console.log(value);
+                }
+                else{
                     type = rule.token;
+                }
 
                 if (rule.next) {
                     currentState = rule.next;
@@ -7761,6 +7781,8 @@ var Tokenizer = function(rules, flag) {
 
         if (token.type)
             tokens.push(token);
+
+        console.log(tokens);
 
         return {
             tokens : tokens,
@@ -8656,11 +8678,12 @@ var BackgroundTokenizer = function(tokenizer, editor) {
         var line = this.doc.getLine(row);
         var state = this.states[row - 1];
 
-        if (line.length > MAX_LINE_LENGTH) {
+        if (line.length > MAX_LINE_LENGTH) { //Charlie
             var overflow = {value: line.substr(MAX_LINE_LENGTH), type: "text"};
             line = line.slice(0, MAX_LINE_LENGTH);
         }
         var data = this.tokenizer.getLineTokens(line, state);
+        console.log(data);
         if (overflow) {
             data.tokens.push(overflow);
             data.state = "start";
@@ -11171,7 +11194,6 @@ var VirtualRenderer = function(container, theme) {
     this.scrollBar.addEventListener("scroll", function(e) {
         if (!_self.$inScrollAnimation)
             _self.session.setScrollTop(e.data);
-            console.log('CHARLIE LIPFORD: first scroll test');
     });
 
     this.scrollTop = 0;
@@ -11181,7 +11203,6 @@ var VirtualRenderer = function(container, theme) {
         var scrollLeft = _self.scroller.scrollLeft;
         _self.scrollLeft = scrollLeft;
         _self.session.setScrollLeft(scrollLeft);
-        console.log('CHARLIE LIPFORD: second scroll test');
     });
 
     this.cursorPos = {
@@ -12733,7 +12754,10 @@ var Text = function(parentEl) {
         var self = this;
         var replaceReg = /\t|&|<|( +)|([\u0000-\u0019\u00a0\u1680\u180E\u2000-\u200b\u2028\u2029\u202F\u205F\u3000\uFEFF])|[\u1100-\u115F\u11A3-\u11A7\u11FA-\u11FF\u2329-\u232A\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u2FF0-\u2FFB\u3000-\u303E\u3041-\u3096\u3099-\u30FF\u3105-\u312D\u3131-\u318E\u3190-\u31BA\u31C0-\u31E3\u31F0-\u321E\u3220-\u3247\u3250-\u32FE\u3300-\u4DBF\u4E00-\uA48C\uA490-\uA4C6\uA960-\uA97C\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE66\uFE68-\uFE6B\uFF01-\uFF60\uFFE0-\uFFE6]/g;
         var replaceFunc = function(c, a, b, tabIdx, idx4) {
+            console.log('inner func args:');
+            console.log(arguments);
             if (a) {
+                console.log(a);
                 return new Array(c.length+1).join("&#160;");
             } else if (c == "&") {
                 return "&#38;";
@@ -12764,11 +12788,13 @@ var Text = function(parentEl) {
         var output = value.replace(replaceReg, replaceFunc);
 
         if (!this.$textToken[token.type]) {
+            //charlie lipford...we want this to run
             var classes = "ace_" + token.type.replace(/\./g, " ace_");
             var style = "";
             if (token.type == "fold")
                 style = " style='width:" + (token.value.length * this.config.characterWidth) + "px;' ";
             stringBuilder.push("<span class='", classes, "'", style, ">", output, "</span>");
+            console.log(classes);
         }
         else {
             stringBuilder.push(output);
@@ -12850,6 +12876,7 @@ var Text = function(parentEl) {
         // simple, otherwise, we need to fake some things...
         if (!this.session.isRowFolded(row)) {
             var splits = this.session.getRowSplitData(row);
+            console.log(splits);
             this.$renderLineCore(stringBuilder, row, tokens, splits, onlyContents);
         } else {
             this.$renderFoldLine(stringBuilder, row, tokens, onlyContents);
@@ -12860,6 +12887,8 @@ var Text = function(parentEl) {
         var session = this.session;
         var foldLine = session.getFoldLine(row);
         var renderTokens = [];
+
+        console.log(new Error().stack);
 
         function addTokens(tokens, from, to) {
             var idx = 0, col = 0;

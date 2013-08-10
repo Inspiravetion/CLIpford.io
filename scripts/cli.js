@@ -24,6 +24,12 @@ Object.defineProperty(String.prototype, 'startsWith', {
   }
 });
 
+Object.defineProperty(String.prototype, 'endsWith', {
+  value: function(str){
+    return this.substr(0 - str.length) == str;
+  }
+});
+
 Object.defineProperty(String.prototype, 'contains', {
   value: function(str){
     return this.search(str) != -1;
@@ -70,9 +76,19 @@ var CLI = function(cliId){
   this._cachedCommand      = '';
   this._commandRegistry    = {};
   this._tabCommandRegistry = [];
+  this._route              = '~';
   this._editor             = ace.edit(cliId);
   this._initStyling();
   this._initKeyHandlers();
+  this._initEventHandlers();
+};
+
+CLI.prototype._initEventHandlers  = function() {
+  // this._editor.on('change', function(e){
+  //   console.log(e);
+  // }); //editor changes but i need to listen on the renderer
+
+  //Make TextLayer an event emmiter?
 };
 
 CLI.prototype._initStyling = function() {
@@ -84,6 +100,10 @@ CLI.prototype._initStyling = function() {
 CLI.prototype._writePrompt = function() {
   var pos = this._editor.getCursorPosition(); 
   this._editor.getSession().insert(pos, this._prompt);
+};
+
+CLI.prototype._textLayer = function() {
+  return this._editor.container.querySelector('.ace_text-layer');
 };
 
 CLI.prototype._inEditableArea = function() { 
@@ -124,9 +144,27 @@ CLI.prototype._topVisibleRow = function() {
   );
 };
 
-CLI.prototype._log = function(msg) {
-  this._editor.insert(msg);
+CLI.prototype._log = function(msg, cssClass) {
+  if(!cssClass){
+    this._editor.insert(msg);
+  }
+  else if(typeof cssClass == 'string'){
+    this._logStyle(msg, cssClass);
+  }
+  else if(cssClass instanceof Array){
+    for(var i = 0; i < cssClass.length; i++){
+      this._logStyle(cssClass[i].msg, cssClass[i].css);
+    }
+  }
   this._doc().insertNewLine(this._editor.getCursorPosition());
+};
+
+CLI.prototype._logStyle = function(msg, css) {
+  var container;
+  this._editor.insert(msg);
+  container = this._textLayer().children;
+  console.log(container);
+  //asynchronous event emitter calls are fuckn up this part
 };
 
 CLI.prototype._width = function() {
@@ -187,11 +225,6 @@ CLI.prototype._tab = function() {
     this._replaceCommand(this._prompt + possibles[0]);
   }
   else if(possibles.length > 1){
-    //display horizontally instead of vertically
-    // this._doc().insertNewLine(pos);
-    // possibles.forEach(function(cmd){
-    //   self._log(cmd);
-    // });
     this._prettyPrint(possibles);
     this._writePrompt();
     this._editor.insert(orig);
@@ -279,12 +312,13 @@ CLI.prototype._prettyPrint = function(argArr) {
   this._log('');
   for(var i = 0; i < argArr.length; i++){
     if(i != 0 && i % colCount == 0){ 
+      console.log(i);
       this._log(row);
       row = '';
     }
     row += argArr[i].padBack(maxStrLen - argArr[i].length) + gutter;
   }
-  this._log(row);
+  this._log(row); 
 };
 
 // Command handling--------------------
@@ -335,6 +369,21 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
 CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
   this._tabCommandRegistry.push(name); //still need to add path tab integration
   return this._commandRegistry[name] = new Command(cmdFunc, usage, description);
+};
+
+// Routing-----------------------------
+
+CLI.prototype._validateRoute = function(route) {
+    //see if route exists in the registerd routes
+    return true;
+};
+
+CLI.prototype._navigateTo = function(route) {
+  //change whats in the url bar
+
+  //swap the appropriate event listeners
+
+  //load the appropriate libraries
 };
 
 // Inner Classes
