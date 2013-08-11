@@ -1,6 +1,8 @@
 window.onload = function(){
   var cli = new CLI('cli');
 
+  //COMMANDS-------------------------------------------------------------------
+
   /* Echo */
   cli.registerCommand(
     'echo', 
@@ -109,6 +111,16 @@ window.onload = function(){
   /* Run */
   cli.registerCommand(
     'run', function(sFlgs, lFlgs, args){}, '', ''
+  );
+
+  //ROUTES---------------------------------------------------------------------
+ 
+  cli.registerRoute(
+    '~/test/directory', 
+    'test',
+    function(){
+      console.log('route setup complete');
+    }
   );
 
   /*

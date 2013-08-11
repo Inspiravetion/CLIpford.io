@@ -75,20 +75,12 @@ var CLI = function(cliId){
   this._cmdHistoryIndex    = 0;
   this._cachedCommand      = '';
   this._commandRegistry    = {};
+  this._routeRegistry      = {};
   this._tabCommandRegistry = [];
   this._route              = '~';
   this._editor             = ace.edit(cliId);
   this._initStyling();
   this._initKeyHandlers();
-  this._initEventHandlers();
-};
-
-CLI.prototype._initEventHandlers  = function() {
-  // this._editor.on('change', function(e){
-  //   console.log(e);
-  // }); //editor changes but i need to listen on the renderer
-
-  //Make TextLayer an event emmiter?
 };
 
 CLI.prototype._initStyling = function() {
@@ -216,9 +208,16 @@ CLI.prototype._tab = function() {
   orig = this._getCommand();
   prfx = orig.split(' ').pop();
   possibles = [];
+  console.log('prefix: ' + prfx);
   this._tabCommandRegistry.forEach(function(cmd){
     if(cmd.startsWith(prfx)){
       possibles.push(cmd);
+    }
+    else if(cmd.startsWith('..')){
+      //handle back routes
+    }
+    else if(cmd.startsWith('.')){
+      //handle relative routes
     }
   });
   if(possibles.length == 1){
@@ -275,13 +274,6 @@ CLI.prototype._right = function() {
   }
 };
 
-CLI.prototype._empty = function(optMsg) {
-  return function(){
-    if(optMsg)
-      console.log(optMsg)
-  }
-};
-
 CLI.prototype._replaceCommand = function(optCmd) {
   var cmd, rng; 
   cmd = optCmd || (optCmd == '' ? '' : 
@@ -312,7 +304,6 @@ CLI.prototype._prettyPrint = function(argArr) {
   this._log('');
   for(var i = 0; i < argArr.length; i++){
     if(i != 0 && i % colCount == 0){ 
-      console.log(i);
       this._log(row);
       row = '';
     }
@@ -373,17 +364,30 @@ CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
 
 // Routing-----------------------------
 
-CLI.prototype._validateRoute = function(route) {
-    //see if route exists in the registerd routes
-    return true;
+CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
+  //i think this should be nested objects to represent directory structure
+  //then you could look at where u are in a directory and know what possible
+  //routes you have based off of that
+  this._routeRegistry[unixRoute] = { 
+    'webRoute' : webRoute, 
+    'setup' : setup 
+  };
+
+  this._tabCommandRegistry.push(unixRoute);
 };
 
-CLI.prototype._navigateTo = function(route) {
-  //change whats in the url bar
+CLI.prototype._validateRoute = function(unixRoute) {
+  return this._routeRegistry[unixRoute] ? true : false;
+};
 
-  //swap the appropriate event listeners
+CLI.prototype._navigateTo = function(unixRoute) {
+  var route = this._routeRegistry[unixRoute];
+  //remove cli event handlers
 
   //load the appropriate libraries
+  route.setup.call(this);
+
+  window.history.pushState(null, null, route.webRoute);
 };
 
 // Inner Classes
