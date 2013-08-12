@@ -123,6 +123,22 @@ window.onload = function(){
     }
   );
 
+  cli.registerRoute(
+    '~/another/test/directory', 
+    'test2',
+    function(){
+      console.log('route setup complete');
+    }
+  );
+
+  cli.registerRoute(
+    '~/test/something', 
+    'test3',
+    function(){
+      console.log('route setup complete');
+    }
+  );
+
   /*
    * Notes:
    * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action

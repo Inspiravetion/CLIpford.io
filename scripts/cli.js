@@ -202,24 +202,39 @@ CLI.prototype._return = function() {
 
 CLI.prototype._tab = function() {
   //right now only works for last word...should make it work on cursor
-  var orig, prfx, possibles, self, pos;
+  //need to replace all untabbed words after the pretty print
+  var orig, prfx, possibles, self, pos, routeObj, routeArr, prfxRoute;
   self = this;
   pos = this._editor.getCursorPosition();
   orig = this._getCommand();
   prfx = orig.split(' ').pop();
   possibles = [];
   console.log('prefix: ' + prfx);
+  
   this._tabCommandRegistry.forEach(function(cmd){
     if(cmd.startsWith(prfx)){
       possibles.push(cmd);
     }
-    else if(cmd.startsWith('..')){
-      //handle back routes
-    }
-    else if(cmd.startsWith('.')){
-      //handle relative routes
-    }
   });
+
+  if(prfx.startsWith('..')){
+    prfxRoute = prfx.endsWith('/') ? prfx.substr(0, prfx.length - 1) : prfx;
+    routeArr = this._route.split('/');
+    
+    while(prfx.startsWith('..')){
+      prfx = prfx.substr(3);
+      routeArr.pop();
+    }
+
+    routeObj = this._getRouteObj(routeArr.join('/'));
+    possibles = possibles.concat(this._getRouteChildren(prfxRoute, routeObj));
+  }
+  else if(prfx.startsWith('.')){
+    prfxRoute = prfx.endsWith('/') ? prfx.substr(0, prfx.length - 1) : prfx;
+    routeObj = this._getRouteObj(this._route);
+    possibles = possibles.concat(this._getRouteChildren(prfxRoute, routeObj));
+  }
+
   if(possibles.length == 1){
     this._replaceCommand(this._prompt + possibles[0]);
   }
@@ -358,17 +373,22 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
 };
 
 CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
-  this._tabCommandRegistry.push(name); //still need to add path tab integration
+  this._tabCommandRegistry.push(name); 
   return this._commandRegistry[name] = new Command(cmdFunc, usage, description);
 };
 
 // Routing-----------------------------
 
 CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
-  //i think this should be nested objects to represent directory structure
-  //then you could look at where u are in a directory and know what possible
-  //routes you have based off of that
-  this._routeRegistry[unixRoute] = { 
+  var currObj, splitRoute;
+  splitRoute = unixRoute.split('/');
+  currObj    = this._routeRegistry;
+  for(var i = 0; i < splitRoute.length; i++){
+    currObj[splitRoute[i]] = currObj[splitRoute[i]] || {};
+    currObj = currObj[splitRoute[i]];
+  }
+
+  currObj.routeData = { //this needs to be set for every nested object
     'webRoute' : webRoute, 
     'setup' : setup 
   };
@@ -377,17 +397,49 @@ CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
 };
 
 CLI.prototype._validateRoute = function(unixRoute) {
-  return this._routeRegistry[unixRoute] ? true : false;
+  var currObj, splitRoute;
+  splitRoute = unixRoute.split('/');
+  currObj = this._routeRegistry;
+  for(var i = 0; i < splitRoute.length; i++){
+    if(currObj[splitRoute[i]]){
+      currObj = currObj[splitRoute[i]];
+    }
+    else{
+      return false;
+    }
+  }
+  return true;
 };
 
 CLI.prototype._navigateTo = function(unixRoute) {
-  var route = this._routeRegistry[unixRoute];
+  var route;
+
+  route = this._getRouteObj(unixRoute).routeData;
   //remove cli event handlers
 
-  //load the appropriate libraries
   route.setup.call(this);
-
   window.history.pushState(null, null, route.webRoute);
+};
+
+CLI.prototype._getRouteObj = function(routeStr) {
+  var currObj, splitRoute;
+  splitRoute = routeStr.split('/');
+  currObj = this._routeRegistry;
+  for(var i = 0; i < splitRoute.length; i++){
+    currObj = currObj[splitRoute[i]];
+  }
+  return currObj;
+};
+
+CLI.prototype._getRouteChildren = function(prfx, routeObj) {
+  var routes;
+  routes = [];
+  for(var key in routeObj){
+    if(key != 'routeData'){
+      routes.push(prfx + '/' + key);
+    }
+  }
+  return routes;
 };
 
 // Inner Classes
