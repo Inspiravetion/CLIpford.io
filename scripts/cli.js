@@ -48,6 +48,16 @@ Object.defineProperty(String.prototype, 'padBack', {
   }
 });
 
+Object.defineProperty(String.prototype, 'repeat', {
+  value: function(num){
+    var repeatStr = '';
+    for(var i = 0; i < num; i++){
+      repeatStr += this;
+    }
+    return repeatStr;
+  }
+});
+
 Object.defineProperty(Array.prototype, 'contains', {
   value: function(obj){
     if(typeof obj == 'function'){
@@ -203,13 +213,11 @@ CLI.prototype._return = function() {
 CLI.prototype._tab = function() {
   //right now only works for last word...should make it work on cursor
   //need to replace all untabbed words after the pretty print
-  var orig, prfx, possibles, self, pos, routeObj, routeArr, prfxRoute;
-  self = this;
-  pos = this._editor.getCursorPosition();
-  orig = this._getCommand();
-  prfx = orig.split(' ').pop();
+  var orig, prfx, possibles, pos, routeObj, routeArr, prfxRoute, count;
+  pos       = this._editor.getCursorPosition();
+  orig      = this._getCommand();
+  prfx      = orig.split(' ').pop();
   possibles = [];
-  console.log('prefix: ' + prfx);
   
   this._tabCommandRegistry.forEach(function(cmd){
     if(cmd.startsWith(prfx)){
@@ -219,20 +227,23 @@ CLI.prototype._tab = function() {
 
   if(prfx.startsWith('..')){
     prfxRoute = prfx.endsWith('/') ? prfx.substr(0, prfx.length - 1) : prfx;
-    routeArr = this._route.split('/');
+    routeArr  = this._route.split('/');
+    count     = 0;
     
     while(prfx.startsWith('..')){
       prfx = prfx.substr(3);
       routeArr.pop();
+      count++;
     }
 
-    routeObj = this._getRouteObj(routeArr.join('/'));
-    possibles = possibles.concat(this._getRouteChildren(prfxRoute, routeObj));
+    routeObj  = this._getRouteObj(routeArr.join('/'));
+    possibles = possibles.concat(this._getRouteChildren('../', prfxRoute, routeObj, count));
   }
-  else if(prfx.startsWith('.')){
+  else if(prfx.startsWith('.')){ //not working
+    //cd ./a/b  will give ./a/b/b/c
     prfxRoute = prfx.endsWith('/') ? prfx.substr(0, prfx.length - 1) : prfx;
-    routeObj = this._getRouteObj(this._route);
-    possibles = possibles.concat(this._getRouteChildren(prfxRoute, routeObj));
+    routeObj  = this._getRouteObj(this._route);
+    possibles = possibles.concat(this._getRouteChildren('./', prfxRoute, routeObj, 1));
   }
 
   if(possibles.length == 1){
@@ -386,9 +397,10 @@ CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
   for(var i = 0; i < splitRoute.length; i++){
     currObj[splitRoute[i]] = currObj[splitRoute[i]] || {};
     currObj = currObj[splitRoute[i]];
+    currObj.routeData = { 'webRoute' : splitRoute[i], 'setup' : null };
   }
 
-  currObj.routeData = { //this needs to be set for every nested object
+  currObj.routeData = { 
     'webRoute' : webRoute, 
     'setup' : setup 
   };
@@ -417,7 +429,9 @@ CLI.prototype._navigateTo = function(unixRoute) {
   route = this._getRouteObj(unixRoute).routeData;
   //remove cli event handlers
 
-  route.setup.call(this);
+  if(route.setup)
+    route.setup.call(this);
+
   window.history.pushState(null, null, route.webRoute);
 };
 
@@ -431,15 +445,50 @@ CLI.prototype._getRouteObj = function(routeStr) {
   return currObj;
 };
 
-CLI.prototype._getRouteChildren = function(prfx, routeObj) {
-  var routes;
-  routes = [];
-  for(var key in routeObj){
-    if(key != 'routeData'){
-      routes.push(prfx + '/' + key);
+//handle when they put just './' or '../'
+CLI.prototype._getRouteChildren = function(prfx, fullPrfxRoute, routeObj, prfxCount) {
+  var routes, prfxRoute, currObj, repeatPrfx;
+  repeatPrfx = prfx.repeat(prfxCount);
+  prfxRoute  = fullPrfxRoute.replace(repeatPrfx, '').split('/');
+
+  routes = this._getValidRouteChildren(routeObj, prfxRoute, 0, repeatPrfx);
+
+  return routes || [];
+};
+
+CLI.prototype._getValidRouteChildren = function(routeObj, prfxArr, index, prfx) {
+  var possibles;
+  possibles = [];
+  if(index != prfxArr.length){
+    for(var key in routeObj){
+      if(key != 'routeData' && key == prfxArr[index]){
+        return this._getValidRouteChildren(
+          routeObj[key], 
+          prfxArr, 
+          index + 1, 
+          prfx + key + '/'
+        );
+      }
     }
   }
-  return routes;
+
+  if(index == prfxArr.length - 1){
+    for(var key in routeObj){
+      if(key != 'routeData' && key.startsWith(prfxArr[index])){
+        possibles.push(prfx + key);
+      }
+    }
+  }
+
+  if(index == prfxArr.length){
+    for(var key in routeObj){
+      if(key != 'routeData'){
+        possibles.push(prfx + key);
+      }
+    }
+  }
+
+  return possibles.length ? possibles : null;
 };
 
 // Inner Classes
@@ -483,11 +532,12 @@ var Flag = function(short, long, description){
   this.short       = short || '';
   this.long        = long || '';
   this.description = description || '';
+  this.delim       = ' , ';
 };
 
 Flag.prototype.length = function() {
   if(this.long && this.short){
-    return this.short.length + this.long.length + 3; // ' , '.length
+    return this.short.length + this.long.length + this.delim.length; 
   }
   return this.short.length || this.long.length;
 };
@@ -496,7 +546,7 @@ Flag.prototype.toString = function(maxLen) {
   var str = '',
   pad = maxLen - this.length();
   if(this.short && this.long){
-    str += (this.short + ' , ' + this.long).padBack(pad);
+    str += (this.short + this.delim + this.long).padBack(pad);
   }
   else if(this.short){
     str += this.short.padBack(pad);
