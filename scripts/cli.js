@@ -226,7 +226,8 @@ CLI.prototype._tab = function() {
   });
 
   if(prfx.startsWith('..')){
-    prfxRoute = prfx.endsWith('/') ? prfx.substr(0, prfx.length - 1) : prfx;
+    prfxRoute = (prfx != '../' && prfx.endsWith('/')) ? 
+      prfx.substr(0, prfx.length - 1) : (prfx == '..' ? '' : prfx);
     routeArr  = this._route.split('/');
     count     = 0;
     
@@ -237,13 +238,17 @@ CLI.prototype._tab = function() {
     }
 
     routeObj  = this._getRouteObj(routeArr.join('/'));
-    possibles = possibles.concat(this._getRouteChildren('../', prfxRoute, routeObj, count));
+    possibles = possibles.concat(
+      this._getRouteChildren('../', prfxRoute, routeObj, count)
+    );
   }
-  else if(prfx.startsWith('.')){ //not working
-    //cd ./a/b  will give ./a/b/b/c
-    prfxRoute = prfx.endsWith('/') ? prfx.substr(0, prfx.length - 1) : prfx;
+  else if(prfx.startsWith('.')){
+    prfxRoute = (prfx != './' && prfx.endsWith('/')) ? 
+      prfx.substr(0, prfx.length - 1) : (prfx == '.' ? '' : prfx);
     routeObj  = this._getRouteObj(this._route);
-    possibles = possibles.concat(this._getRouteChildren('./', prfxRoute, routeObj, 1));
+    possibles = possibles.concat(
+      this._getRouteChildren('./', prfxRoute, routeObj, 1)
+    );
   }
 
   if(possibles.length == 1){
@@ -445,7 +450,6 @@ CLI.prototype._getRouteObj = function(routeStr) {
   return currObj;
 };
 
-//handle when they put just './' or '../'
 CLI.prototype._getRouteChildren = function(prfx, fullPrfxRoute, routeObj, prfxCount) {
   var routes, prfxRoute, currObj, repeatPrfx;
   repeatPrfx = prfx.repeat(prfxCount);
@@ -459,6 +463,7 @@ CLI.prototype._getRouteChildren = function(prfx, fullPrfxRoute, routeObj, prfxCo
 CLI.prototype._getValidRouteChildren = function(routeObj, prfxArr, index, prfx) {
   var possibles;
   possibles = [];
+
   if(index != prfxArr.length){
     for(var key in routeObj){
       if(key != 'routeData' && key == prfxArr[index]){
