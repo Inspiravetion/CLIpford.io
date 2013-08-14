@@ -271,13 +271,17 @@ CLI.prototype._tab = function() {
 
   if(possibles.length == 1){
     args[count] = possibles[0];
-    this._replaceCommand(this._prompt + args.join(' '));
+    this._replaceCommand(
+      this._prompt + args.join(' '),
+      (this._prompt + args.slice(0, count + 1).join(' ')).length
+    );
   }
   else if(possibles.length > 1){
     this._editor.moveCursorTo(this._currRow(), this._currLineLength());
     this._prettyPrint(possibles);
     this._writePrompt();
     this._editor.insert(args.join(' '));
+    this._editor.moveCursorTo(this._currRow(), pos.column);
   }
 };
 
@@ -325,16 +329,24 @@ CLI.prototype._right = function() {
   }
 };
 
-CLI.prototype._replaceCommand = function(optCmd) {
-  var cmd, rng; 
+CLI.prototype._replaceCommand = function(optCmd, optCol) {
+  var cmd, rng, logLine; 
+
   cmd = optCmd || (optCmd == '' ? '' : 
     this._line(this._currRow() - this._cmdHistoryIndex));
   rng = new Range(this._currRow(), this._prompt.length, this._currRow(), 10000);
+  logLine = false;
+
   if(cmd.startsWith(this._prompt)){
     this._doc().replace(rng, cmd.replace(this._prompt, '').trim());
-    return true;
+    logLine = true;
   }
-  return false;
+
+  if(optCol){
+    this._editor.moveCursorTo(this._currRow(), optCol);
+  }
+
+  return logLine;
 };
 
 CLI.prototype._prettyPrint = function(argArr) {
