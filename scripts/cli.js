@@ -128,6 +128,10 @@ CLI.prototype._currCol = function() {
   return this._editor.getCursorPosition().column;
 };
 
+CLI.prototype._currLineLength = function() {
+  return this._line(this._currRow()).length;
+};
+
 CLI.prototype._getCommand = function(optRow) {
   var row, cmd;
   row = optRow || (optRow == 0 ? 0 : this._currRow());
@@ -162,10 +166,10 @@ CLI.prototype._log = function(msg, cssClass) {
 };
 
 CLI.prototype._logStyle = function(msg, css) {
-  var container;
-  this._editor.insert(msg);
-  container = this._textLayer().children;
-  console.log(container);
+  // var container;
+  // this._editor.insert(msg);
+  // container = this._textLayer().children;
+  // console.log(container);
   //asynchronous event emitter calls are fuckn up this part
 };
 
@@ -213,20 +217,34 @@ CLI.prototype._return = function() {
 CLI.prototype._tab = function() {
   //right now only works for last word...should make it work on cursor
   //need to replace all untabbed words after the pretty print
-  var orig, prfx, possibles, pos, routeObj, routeArr, prfxRoute, count;
+  var orig, prfx, possibles, pos, routeObj, routeArr, prfxRoute, count, low, high;
   pos       = this._editor.getCursorPosition();
   orig      = this._getCommand();
-  prfx      = orig.split(' ').pop();
+  args      = orig.split(' ');
+  count     = this._prompt.length;
   possibles = [];
+  prfx      = '';
+
+  for(var i = 0; i < args.length; i++){
+    low = i + count + 1;
+    high = i + count + args[i].length;
+    count += args[i].length;
+
+    if(pos.column >= low && pos.column <= high){
+      prfx = args[i];
+      count = i;
+      break;
+    }
+  }
   
   this._tabCommandRegistry.forEach(function(cmd){
-    if(cmd.startsWith(prfx)){
+    if(prfx && cmd.startsWith(prfx)){
       possibles.push(cmd);
     }
   });
 
   if(prfx.startsWith('..')){
-    prfxRoute = (prfx != '../' && prfx.endsWith('/')) ? 
+    prfxRoute = (!prfx.endsWith('../') && prfx.endsWith('/')) ? 
       prfx.substr(0, prfx.length - 1) : (prfx == '..' ? '' : prfx);
     routeArr  = this._route.split('/');
     count     = 0;
@@ -252,12 +270,14 @@ CLI.prototype._tab = function() {
   }
 
   if(possibles.length == 1){
-    this._replaceCommand(this._prompt + possibles[0]);
+    args[count] = possibles[0];
+    this._replaceCommand(this._prompt + args.join(' '));
   }
   else if(possibles.length > 1){
+    this._editor.moveCursorTo(this._currRow(), this._currLineLength());
     this._prettyPrint(possibles);
     this._writePrompt();
-    this._editor.insert(orig);
+    this._editor.insert(args.join(' '));
   }
 };
 
