@@ -87,7 +87,8 @@ var CLI = function(cliId){
   this._commandRegistry    = {};
   this._routeRegistry      = {};
   this._tabCommandRegistry = [];
-  this._route              = '~';
+  this._rootDir            = '~';
+  this._route              = this._rootDir;
   this._editor             = ace.edit(cliId);
   this._initStyling();
   this._initKeyHandlers();
@@ -121,7 +122,7 @@ CLI.prototype._line = function(row) {
 };
 
 CLI.prototype._currRow = function() {
-  return this._editor.getCursorPosition().row; //this is wrong on scroll
+  return this._editor.getCursorPosition().row; 
 };
 
 CLI.prototype._currCol = function() {
@@ -151,6 +152,10 @@ CLI.prototype._topVisibleRow = function() {
 };
 
 CLI.prototype._log = function(msg, cssClass) {
+  if(typeof msg != 'string'){
+    msg = msg.toString();
+  }
+
   if(!cssClass){
     this._editor.insert(msg);
   }
@@ -184,6 +189,10 @@ CLI.prototype._height = function() {
 };
 
 // Key event handling------------------
+CLI.prototype._disableKeyHandlers = function() {
+  this._editor.setKeyboardHandler(new HashHandler());
+};
+
 CLI.prototype._initKeyHandlers = function() {
   this._bindKeys([
     { 'Return'   : this._return.bind(this)    },
@@ -215,24 +224,24 @@ CLI.prototype._return = function() {
 };
 
 CLI.prototype._tab = function() {
-  //right now only works for last word...should make it work on cursor
-  //need to replace all untabbed words after the pretty print
-  var orig, prfx, possibles, pos, routeObj, routeArr, prfxRoute, count, low, high;
+  var orig, prfx, possibles, pos, routeObj, routeArr, prfxRoute, argIndex, 
+  backCount, length, low, high;
+  
   pos       = this._editor.getCursorPosition();
   orig      = this._getCommand();
   args      = orig.split(' ');
-  count     = this._prompt.length;
+  length    = this._prompt.length;
   possibles = [];
   prfx      = '';
 
   for(var i = 0; i < args.length; i++){
-    low = i + count + 1;
-    high = i + count + args[i].length;
-    count += args[i].length;
+    low = i + length + 1;
+    high = i + length + args[i].length;
+    length += args[i].length;
 
     if(pos.column >= low && pos.column <= high){
       prfx = args[i];
-      count = i;
+      argIndex = i;
       break;
     }
   }
@@ -247,17 +256,17 @@ CLI.prototype._tab = function() {
     prfxRoute = (!prfx.endsWith('../') && prfx.endsWith('/')) ? 
       prfx.substr(0, prfx.length - 1) : (prfx == '..' ? '' : prfx);
     routeArr  = this._route.split('/');
-    count     = 0;
+    backCount = 0;
     
     while(prfx.startsWith('..')){
       prfx = prfx.substr(3);
       routeArr.pop();
-      count++;
+      backCount++;
     }
 
     routeObj  = this._getRouteObj(routeArr.join('/'));
     possibles = possibles.concat(
-      this._getRouteChildren('../', prfxRoute, routeObj, count)
+      this._getRouteChildren('../', prfxRoute, routeObj, backCount)
     );
   }
   else if(prfx.startsWith('.')){
@@ -270,10 +279,11 @@ CLI.prototype._tab = function() {
   }
 
   if(possibles.length == 1){
-    args[count] = possibles[0];
+    args[argIndex] = possibles[0];
+
     this._replaceCommand(
       this._prompt + args.join(' '),
-      (this._prompt + args.slice(0, count + 1).join(' ')).length
+      (this._prompt + args.slice(0, argIndex + 1).join(' ')).length
     );
   }
   else if(possibles.length > 1){
@@ -338,8 +348,10 @@ CLI.prototype._replaceCommand = function(optCmd, optCol) {
   logLine = false;
 
   if(cmd.startsWith(this._prompt)){
-    this._doc().replace(rng, cmd.replace(this._prompt, '').trim());
-    logLine = true;
+    if(cmd != this._prompt || this._cmdHistoryIndex == 0){
+      this._doc().replace(rng, cmd.replace(this._prompt, '').trim());
+      logLine = true;
+    }
   }
 
   if(optCol){
@@ -378,14 +390,14 @@ CLI.prototype._prettyPrint = function(argArr) {
 // Command handling--------------------
 
 CLI.prototype._handleCommand = function(rawCmd) {
-  var cmdArr, cmdName, sFlags, lFlags, args, parts;
-  cmdArr  = rawCmd.split(' ');
-  cmdName = cmdArr.shift();
+  var cmdArr, cmdName, sFlags, lFlags, args, cmdParts;
   this._validCommand = true;
-  parts   = this._sortCommandParams(cmdName, cmdArr);
-  sFlags  = parts.sFlags;
-  lFlags  = parts.lFlags;
-  args    = parts.args;
+  cmdArr   = rawCmd.split(' ');
+  cmdName  = cmdArr.shift();
+  cmdParts = this._sortCommandParams(cmdName, cmdArr);
+  sFlags   = cmdParts.sFlags;
+  lFlags   = cmdParts.lFlags;
+  args     = cmdParts.args;
   if(this._commandRegistry[cmdName] && this._validCommand){
     this._commandRegistry[cmdName].cmd.call(this, sFlags, lFlags, args);
   }
@@ -462,9 +474,7 @@ CLI.prototype._validateRoute = function(unixRoute) {
 
 CLI.prototype._navigateTo = function(unixRoute) {
   var route;
-
   route = this._getRouteObj(unixRoute).routeData;
-  //remove cli event handlers
 
   if(route.setup)
     route.setup.call(this);
@@ -473,11 +483,11 @@ CLI.prototype._navigateTo = function(unixRoute) {
 };
 
 CLI.prototype._getRouteObj = function(routeStr) {
-  var currObj, splitRoute;
-  splitRoute = routeStr.split('/');
+  var currObj, directories;
+  directories = routeStr.split('/');
   currObj = this._routeRegistry;
-  for(var i = 0; i < splitRoute.length; i++){
-    currObj = currObj[splitRoute[i]];
+  for(var i = 0; i < directories.length; i++){
+    currObj = currObj[directories[i]];
   }
   return currObj;
 };

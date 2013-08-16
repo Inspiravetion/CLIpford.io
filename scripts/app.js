@@ -1,6 +1,7 @@
 window.onload = function(){
   var cli = new CLI('cli');
 
+  window.cli = cli;
   //COMMANDS-------------------------------------------------------------------
 
   /* Echo */
@@ -78,16 +79,19 @@ window.onload = function(){
         if(newPath.endsWith('/')){
           newPath = newPath.substr(0, newPath.length - 1);
         }
-      }
 
-      if(newPath && this._validateRoute(newPath)){
-        this._route = newPath;
-        this._navigateTo(this._route);
-        this._log(this._route);
+        if(this._validateRoute(newPath)){
+          this._route = newPath;
+        }
+        else {
+          this._log('ERROR: You specified a path that does not exist');
+        }
       }
-      else {
-        this._log('ERROR: You specified a path that does not exist');
+      else{
+        this._route = this._rootDir;
       }
+      this._navigateTo(this._route);
+      this._log(this._route);
     }, 
     'cd [relative | absolute path]', 
     'Navigates you through the site pages'
