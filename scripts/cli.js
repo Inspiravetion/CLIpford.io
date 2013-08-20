@@ -78,9 +78,9 @@ var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
 // Command Line Interface
 //-----------------------------------------------------------------------------
 
-var CLI = function(cliId){
+var CLI = function(cliId, optTokenStyler){
   this._sFlagRegex         = new RegExp('^(?:\-)(\w*)');
-  this._dFlagRegex         = new RegExp('^(?:\-\-)(\w*)');
+  this._lFlagRegex         = new RegExp('^(?:\-\-)(\w*)');
   this._prompt             = '~/users/clip $>';
   this._cmdHistoryIndex    = 0;
   this._cachedCommand      = '';
@@ -92,6 +92,11 @@ var CLI = function(cliId){
   this._editor             = ace.edit(cliId);
   this._initStyling();
   this._initKeyHandlers();
+  this.setTokenStyler(optTokenStyler || null);
+};
+
+CLI.prototype.setTokenStyler = function(tStyler) {
+  this._editor.session.bgTokenizer.tokenStyler = tStyler;
 };
 
 CLI.prototype._initStyling = function() {
@@ -406,7 +411,7 @@ CLI.prototype._handleCommand = function(rawCmd) {
 CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
   var sFlags = {}, lFlags = {}, args = [];
   for(var i = 0; i < paramArr.length; i++){
-    if(this._dFlagRegex.test(paramArr[i])){
+    if(this._lFlagRegex.test(paramArr[i])){
       if(this._commandRegistry[cmdName].hasFlag(paramArr[i])){ 
         lFlags[paramArr[i]] = paramArr[i + 1];
         i++;

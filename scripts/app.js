@@ -1,14 +1,13 @@
 window.onload = function(){
-  var cli = new CLI('cli');
+  var cli = new CLI('cli', new TokenStyler());
 
-  window.cli = cli;
   //COMMANDS-------------------------------------------------------------------
 
   /* Echo */
   cli.registerCommand(
     'echo', 
     function(sFlgs, lFlgs, args){
-      this._log(args.join(' '), '.green');
+      this._log(args.join(' '));
     }, 
     'echo <message to echo>',
     'Prints out the given message'
@@ -37,7 +36,7 @@ window.onload = function(){
     'Clears recent commands from view'
   );
 
-  /* Help */ //add indentation and space to make more readable
+  /* Help */
   cli.registerCommand(
     'help', 
     function(sFlgs, lFlgs, args){
@@ -142,6 +141,7 @@ window.onload = function(){
       console.log('route setup complete');
     }
   );
+
 
   /*
    * Notes:
