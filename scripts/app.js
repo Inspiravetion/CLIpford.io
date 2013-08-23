@@ -7,7 +7,7 @@ window.onload = function(){
   cli.registerCommand(
     'echo', 
     function(sFlgs, lFlgs, args){
-      this._log(args.join(' '));
+      this._log(args.join(' '), 'green');
     }, 
     'echo <message to echo>',
     'Prints out the given message'

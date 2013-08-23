@@ -97,6 +97,7 @@ var CLI = function(cliId, optTokenStyler){
 
 CLI.prototype.setTokenStyler = function(tStyler) {
   this._editor.session.bgTokenizer.tokenStyler = tStyler;
+  this._doc().tokenStyler = tStyler;
 };
 
 CLI.prototype._initStyling = function() {
@@ -167,7 +168,7 @@ CLI.prototype._log = function(msg, cssClass) {
   else if(typeof cssClass == 'string'){
     this._logStyle(msg, cssClass);
   }
-  else if(cssClass instanceof Array){
+  else if(cssClass instanceof Array){ //figure out how this should work
     for(var i = 0; i < cssClass.length; i++){
       this._logStyle(cssClass[i].msg, cssClass[i].css);
     }
@@ -176,11 +177,10 @@ CLI.prototype._log = function(msg, cssClass) {
 };
 
 CLI.prototype._logStyle = function(msg, css) {
-  // var container;
-  // this._editor.insert(msg);
-  // container = this._textLayer().children;
-  // console.log(container);
-  //asynchronous event emitter calls are fuckn up this part
+  var ts;
+  ts = this._doc().tokenStyler;
+  if(ts)
+    this._editor.insert(ts.lDelim + css + ts.rDelim + msg);
 };
 
 CLI.prototype._width = function() {
