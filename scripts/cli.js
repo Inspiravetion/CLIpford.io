@@ -158,27 +158,36 @@ CLI.prototype._topVisibleRow = function() {
 };
 
 CLI.prototype._log = function(msg, cssClass) {
-  if(typeof msg != 'string'){
-    msg = msg.toString();
-  }
-
-  if(!cssClass){
-    this._editor.insert(msg);
-  }
-  else if(typeof cssClass == 'string'){
-    this._logStyle(msg, cssClass);
-  }
-  else if(cssClass instanceof Array){ //figure out how this should work
-    for(var i = 0; i < cssClass.length; i++){
-      this._logStyle(cssClass[i].msg, cssClass[i].css);
+  if(typeof msg === 'string'){
+    if (typeof cssClass === 'string') {
+      this._logStyle(msg, cssClass);
+    }
+    else if (cssClass instanceof Array) {
+      this._logStyle(msg, cssClass[0]);
+    }
+    else if (!cssClass) {
+      this._editor.insert(msg);
     }
   }
+  else if(msg instanceof Array){
+    if(typeof cssClass === 'string') {
+      this._logStyle(msg.join(''), cssClass);
+    }
+    else if (cssClass instanceof Array) {
+      for(var i = 0; i < cssClass.length; i++){
+        this._logStyle(msg[i], cssClass[i]);
+      }
+    }
+    else if (!cssClass) {
+      this._editor.insert(msg.join(''));
+    }
+  }
+
   this._doc().insertNewLine(this._editor.getCursorPosition());
 };
 
 CLI.prototype._logStyle = function(msg, css) {
-  var ts;
-  ts = this._doc().tokenStyler;
+  var ts = this._doc().tokenStyler;
   if(ts)
     this._editor.insert(ts.lDelim + css + ts.rDelim + msg);
 };
@@ -366,7 +375,7 @@ CLI.prototype._replaceCommand = function(optCmd, optCol) {
   return logLine;
 };
 
-CLI.prototype._prettyPrint = function(argArr) {
+CLI.prototype._prettyPrint = function(argArr) { //log this with color
   var width, gutter, maxStrLen, colWidth, colCount, row;
   maxStrLen = 0;
   gutter    = '\t';
@@ -417,7 +426,10 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
         i++;
       } 
       else {
-        this._log('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+        this._log(
+          'ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName,
+          'error'
+        );
         this._validCommand = false;
       }
     }
@@ -426,7 +438,10 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
         sFlags[paramArr[i]] = true;
       } 
       else {
-        this._log('ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
+        this._log(
+          'ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName,
+          'error'
+        );
         this._validCommand = false;
       }
     } 
@@ -564,6 +579,9 @@ Command.prototype.withFlags = function(flagArr) {
 };
 
 Command.prototype.hasFlag = function(flagStr) {
+  if(!this.flags)
+    return false;
+
   return this.flags.contains(function(flag){
     return flag.short == flagStr || flag.long == flagStr;
   });

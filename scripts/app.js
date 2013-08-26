@@ -83,7 +83,8 @@ window.onload = function(){
           this._route = newPath;
         }
         else {
-          this._log('ERROR: You specified a path that does not exist');
+          this._log('ERROR: You specified a path that does not exist', 'error');
+          return;
         }
       }
       else{
