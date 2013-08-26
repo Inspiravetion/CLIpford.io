@@ -1,54 +1,94 @@
 // Utility setup
 //-----------------------------------------------------------------------------
 
-var $ = function(sel){
-  return document.querySelector(sel);
+/**
+ * Syntactic sugar to help with dom manipulation
+ * @param  {string} selector
+ * @return {HTML node}
+ */
+var $ = function(selector){
+  return document.querySelector(selector);
 };
 
-var $$ = function(sel){
-  return document.querySelectorAll(sel);
+/**
+ * Syntactic sugar to help with dom manipulation
+ * @param  {string} selector
+ * @return {Array of HTML nodes}
+ */
+var $$ = function(selector){
+  return document.querySelectorAll(selector);
 };
-
-var getPadding = function(num, char){
-  var padding = '';
-  char = char || ' ';
-  for(var i = 0; i < num; i++){
-    padding += char;
-  }
-  return padding;
-}
 
 Object.defineProperty(String.prototype, 'startsWith', {
+  /**
+   * Returns true if a string starts with the given string,
+   * false otherwise
+   * @param  {string} str
+   * @return {boolean}
+   */
   value: function(str){
     return this.substr(0, str.length) == str;
   }
 });
 
 Object.defineProperty(String.prototype, 'endsWith', {
+  /**
+   * Returns true if a string ends with the given string,
+   * false otherwise
+   * @param  {string} str
+   * @return {boolean}
+   */
   value: function(str){
     return this.substr(0 - str.length) == str;
   }
 });
 
 Object.defineProperty(String.prototype, 'contains', {
+  /**
+   * Returns true if a string contains the given string,
+   * false otherwise
+   * @param  {string} str
+   * @return {boolean}
+   */
   value: function(str){
     return this.search(str) != -1;
   }
 });
 
 Object.defineProperty(String.prototype, 'padFront', {
-  value: function(num, char){
-    return getPadding(num, char) + this;
+  /**
+   * Returns the current string padded from the front 
+   * with the given string repeated the given number of times
+   * @param  {int} num the number of times to repeat the padding string
+   * @param  {string} str the pad string
+   * @return {string}
+   */
+  value: function(num, str){
+    str = str || '';
+    return str.repeat(num) + this;
   }
 });
 
 Object.defineProperty(String.prototype, 'padBack', {
-  value: function(num, char){
-    return this + getPadding(num, char);
+  /**
+   * Returns the current string padded on the back 
+   * with the given string repeated the given number of times
+   * @param  {int} num the number of times to repeat the padding string
+   * @param  {string} str the pad string
+   * @return {string}
+   */
+  value: function(num, str){
+    str = str || '';
+    return this + str.repeat(num);
   }
 });
 
 Object.defineProperty(String.prototype, 'repeat', {
+  /**
+   * Returns the current string repeated the given amount of times
+   * @param  {int} num the number of times to repeat the string
+   * @return {string}
+   */
   value: function(num){
     var repeatStr = '';
     for(var i = 0; i < num; i++){
@@ -59,6 +99,13 @@ Object.defineProperty(String.prototype, 'repeat', {
 });
 
 Object.defineProperty(Array.prototype, 'contains', {
+  /**
+   * Returns true if the Array contains the given object. If the object
+   * is a function then it is passed each element in the array and if it
+   * ever returns true then this function returns true
+   * @param  {Object || Function} obj
+   * @return {boolean}
+   */
   value: function(obj){
     if(typeof obj == 'function'){
       for(var i = 0; i < this.length; i++){
@@ -78,6 +125,13 @@ var HashHandler = require("ace/keyboard/hash_handler").HashHandler,
 // Command Line Interface
 //-----------------------------------------------------------------------------
 
+/**
+ * Creates a new CLI Object
+ * @param {string} cliId the id of the HTML Element that the CLI should be 
+ * attached to
+ * @param {TokenStyler} optTokenStyler an optional TokenStyler to use for 
+ * color logging
+ */
 var CLI = function(cliId, optTokenStyler){
   this._sFlagRegex         = new RegExp('^(?:\-)(\w*)');
   this._lFlagRegex         = new RegExp('^(?:\-\-)(\w*)');
@@ -259,6 +313,9 @@ CLI.prototype._tab = function() {
       break;
     }
   }
+
+  if(prfx.endsWith('..'))
+    possibles.push(prfx + '/');
   
   this._tabCommandRegistry.forEach(function(cmd){
     if(prfx && cmd.startsWith(prfx)){
@@ -375,7 +432,7 @@ CLI.prototype._replaceCommand = function(optCmd, optCol) {
   return logLine;
 };
 
-CLI.prototype._prettyPrint = function(argArr) { //log this with color
+CLI.prototype._prettyPrint = function(argArr) { 
   var width, gutter, maxStrLen, colWidth, colCount, row;
   maxStrLen = 0;
   gutter    = '\t';
@@ -393,12 +450,12 @@ CLI.prototype._prettyPrint = function(argArr) { //log this with color
   this._log('');
   for(var i = 0; i < argArr.length; i++){
     if(i != 0 && i % colCount == 0){ 
-      this._log(row);
+      this._log(row, 'logging');
       row = '';
     }
     row += argArr[i].padBack(maxStrLen - argArr[i].length) + gutter;
   }
-  this._log(row); 
+  this._log(row, 'logging'); 
 };
 
 // Command handling--------------------

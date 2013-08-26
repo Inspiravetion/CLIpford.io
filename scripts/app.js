@@ -7,7 +7,7 @@ window.onload = function(){
   cli.registerCommand(
     'echo', 
     function(sFlgs, lFlgs, args){
-      this._log(args.join(' '), 'green');
+      this._log(args.join(' '), 'logging');
     }, 
     'echo <message to echo>',
     'Prints out the given message'
@@ -42,12 +42,12 @@ window.onload = function(){
     function(sFlgs, lFlgs, args){
       if(args.length){
         args.forEach(function(cmd){
-          this._log(this._commandRegistry[cmd].toString());
+          this._log(this._commandRegistry[cmd].toString(), 'logging');
         }.bind(this));
       }
       else {
         for(cmd in this._commandRegistry){
-          this._log(this._commandRegistry[cmd].usage);
+          this._log(this._commandRegistry[cmd].usage, 'logging');
         }
       }
     },
@@ -91,7 +91,7 @@ window.onload = function(){
         this._route = this._rootDir;
       }
       this._navigateTo(this._route);
-      this._log(this._route);
+      this._log(this._route, 'logging');
     }, 
     'cd [relative | absolute path]', 
     'Navigates you through the site pages'
