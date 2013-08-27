@@ -149,68 +149,139 @@ var CLI = function(cliId, optTokenStyler){
   this.setTokenStyler(optTokenStyler || null);
 };
 
+/**
+ * Gives the BackgroundTokenizer and Document a reference to a TokenStyler
+ * @param {TokenStyler} tStyler
+ */
 CLI.prototype.setTokenStyler = function(tStyler) {
   this._editor.session.bgTokenizer.tokenStyler = tStyler;
   this._doc().tokenStyler = tStyler;
 };
 
+/**
+ * Initializes the styling and prompt of the CLI
+ */
 CLI.prototype._initStyling = function() {
   this._editor.setTheme('ace/theme/monokai');
   this._editor.renderer.setShowGutter(false);
   this._writePrompt();
 };
 
+/**
+ * Writes the prompt out to the CLI. Called before every non-logging line
+ */
 CLI.prototype._writePrompt = function() {
   var pos = this._editor.getCursorPosition(); 
   this._editor.getSession().insert(pos, this._prompt);
 };
 
+/**
+ * Returns the current TextLayer in the DOM...MIGHT BE DEAD CODE
+ * @return {HTML Node} the DOM TextLayer of the CLI
+ */
 CLI.prototype._textLayer = function() {
   return this._editor.container.querySelector('.ace_text-layer');
 };
 
+/**
+ * Returns wther the current cursor position is past the prompt so that it can
+ * insert text there safely
+ * @return {boolean}
+ */
 CLI.prototype._inEditableArea = function() { 
   return this._prompt.length < this._currCol();
 };
 
+/**
+ * Returns the CLI's Document
+ * @return {Document}
+ */
 CLI.prototype._doc = function() {
   return this._editor.getSession().getDocument();
 };
 
+/**
+ * Returns the text line of the given row
+ * @param  {int} row the row whos text you want
+ * @return {string}
+ */
 CLI.prototype._line = function(row) {
   return this._editor.getSession().getLine(row);
 };
 
+/**
+ * Returns the current row that the cursor is on
+ * @return {int}
+ */
 CLI.prototype._currRow = function() {
   return this._editor.getCursorPosition().row; 
 };
 
+/**
+ * Returns the current column that the cursor is on
+ * @return {int}
+ */
 CLI.prototype._currCol = function() {
   return this._editor.getCursorPosition().column;
 };
 
+/**
+ * Returns the length of the text of the current line
+ * @return {int}
+ */
 CLI.prototype._currLineLength = function() {
   return this._line(this._currRow()).length;
 };
 
+/**
+ * Returns the width, in characters, of the CLI
+ * @return {int}
+ */
+CLI.prototype._width = function() {
+  return Math.floor(
+    this._editor.renderer.$size.width / this._editor.renderer.characterWidth
+  );
+};
+
+/**
+ * Returns just the command portion of the text on the specified row or the 
+ * current row
+ * @param  {int}
+ * @return {string}
+ */
 CLI.prototype._getCommand = function(optRow) {
   var row, cmd;
   row = optRow || (optRow == 0 ? 0 : this._currRow());
   return this._line(row).replace(this._prompt, '').trim();
 };
 
+/**
+ * Returns the number of rows visible in the current CLI window
+ * @return {int}
+ */
 CLI.prototype._totalVisibleRowCapacity = function() {
   return Math.floor(
     this._editor.renderer.$size.height / this._editor.renderer.lineHeight
   );
 };
 
+/**
+ * Returns the top visible row of the CLI 
+ * @return {int}
+ */
 CLI.prototype._topVisibleRow = function() {
   return Math.ceil(
     this._editor.renderer.scrollTop / this._editor.renderer.lineHeight
   );
 };
 
+/**
+ * Prints the given message to the CLI screen with the optional CSS class 
+ * applied. Multiple classes can be given to different parts of a line by 
+ * passing an array of messages and an array of css classes.
+ * @param  {string | string[]} msg 
+ * @param  {string | string[]} cssClass
+ */
 CLI.prototype._log = function(msg, cssClass) {
   if(typeof msg === 'string'){
     if (typeof cssClass === 'string') {
@@ -240,27 +311,29 @@ CLI.prototype._log = function(msg, cssClass) {
   this._doc().insertNewLine(this._editor.getCursorPosition());
 };
 
+/**
+ * Applies token styler rules to a message before printing it to the CLI
+ * @param  {string} msg
+ * @param  {string} css
+ */
 CLI.prototype._logStyle = function(msg, css) {
   var ts = this._doc().tokenStyler;
   if(ts)
     this._editor.insert(ts.lDelim + css + ts.rDelim + msg);
 };
 
-CLI.prototype._width = function() {
-  return Math.floor(
-    this._editor.renderer.$size.width / this._editor.renderer.characterWidth
-  );
-};
-
-CLI.prototype._height = function() {
-  return this._editor.renderer.$size.height;
-};
-
 // Key event handling------------------
+
+/**
+ * Resets the key handlers to the default editor mode
+ */
 CLI.prototype._disableKeyHandlers = function() {
   this._editor.setKeyboardHandler(new HashHandler());
 };
 
+/**
+ * Sets up the CLI key handlers
+ */
 CLI.prototype._initKeyHandlers = function() {
   this._bindKeys([
     { 'Return'   : this._return.bind(this)    },
@@ -273,6 +346,11 @@ CLI.prototype._initKeyHandlers = function() {
   ])
 };
 
+/**
+ * Takes an array of key binding hashes, applies them to a Hash Handler, and 
+ * binds those key handlers to the CLI
+ * @param  {Obj[]} key_bindings
+ */
 CLI.prototype._bindKeys = function(key_bindings) {
   var handler = new HashHandler();
   for(var i = 0; i < key_bindings.length; i++){
@@ -281,6 +359,9 @@ CLI.prototype._bindKeys = function(key_bindings) {
   this._editor.keyBinding.addKeyboardHandler(handler);
 };
 
+/**
+ * Defines what should happen when the return key is pressed
+ */
 CLI.prototype._return = function() {
   var pos, cmd;
   pos = this._editor.getCursorPosition();
@@ -291,6 +372,9 @@ CLI.prototype._return = function() {
   this._cmdHistoryIndex = 0;
 };
 
+/**
+ * Defines what should happen when the tab key is pressed
+ */
 CLI.prototype._tab = function() {
   var orig, prfx, possibles, pos, routeObj, routeArr, prfxRoute, argIndex, 
   backCount, length, low, high;
@@ -366,12 +450,18 @@ CLI.prototype._tab = function() {
   }
 };
 
+/**
+ * Defines what should happen when the backspace key is pressed
+ */
 CLI.prototype._backspace = function() {
   if(this._inEditableArea()){
     this._editor.remove("left");
   }
 };
 
+/**
+ * Defines what should happen when the up key is pressed
+ */
 CLI.prototype._up = function() { 
   if(this._cmdHistoryIndex != this._doc().getLength() - 1){
     if(this._cmdHistoryIndex == 0){
@@ -384,6 +474,9 @@ CLI.prototype._up = function() {
   }
 };
 
+/**
+ * Defines what should happen when the down key is pressed
+ */
 CLI.prototype._down = function() {
   if(this._cmdHistoryIndex == 1){
     this._cmdHistoryIndex--;
@@ -397,12 +490,18 @@ CLI.prototype._down = function() {
   }
 };
 
+/**
+ * Defines what should happen when the left key is pressed
+ */
 CLI.prototype._left = function() {
   if(this._inEditableArea()){
     this._editor.navigateLeft(1);
   }
 };
 
+/**
+ * Defines what should happen when the right key is pressed
+ */
 CLI.prototype._right = function() {
   var endOfLine = this._line(this._currRow()).length;
   if(endOfLine > this._currCol()){
@@ -410,6 +509,14 @@ CLI.prototype._right = function() {
   }
 };
 
+/**
+ * Replaces the current command on the editable line with either a previously
+ * used command or a given command. If optCol is passed in reset the cursor to 
+ * that column
+ * @param  {string} optCmd
+ * @param  {int} optCol
+ * @return {boolean}
+ */
 CLI.prototype._replaceCommand = function(optCmd, optCol) {
   var cmd, rng, logLine; 
 
@@ -432,6 +539,10 @@ CLI.prototype._replaceCommand = function(optCmd, optCol) {
   return logLine;
 };
 
+/**
+ * Prints the array of strings in left aligned, equal length columns
+ * @param  {string[]} argArr
+ */
 CLI.prototype._prettyPrint = function(argArr) { 
   var width, gutter, maxStrLen, colWidth, colCount, row;
   maxStrLen = 0;
