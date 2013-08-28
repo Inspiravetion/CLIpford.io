@@ -571,6 +571,11 @@ CLI.prototype._prettyPrint = function(argArr) {
 
 // Command handling--------------------
 
+/**
+ * Splits up and passes the command, short flags, long flags, and args  
+ * to a registered command function if it exists.
+ * @param  {string} rawCmd
+ */
 CLI.prototype._handleCommand = function(rawCmd) {
   var cmdArr, cmdName, sFlags, lFlags, args, cmdParts;
   this._validCommand = true;
@@ -585,6 +590,13 @@ CLI.prototype._handleCommand = function(rawCmd) {
   }
 };
 
+/**
+ * Splits up a command into short flags, long flags, and arguments. Also 
+ * validates that the flags being used for the current command exist.
+ * @param  {string} cmdName
+ * @param  {string[]} paramArr
+ * @return {Object}
+ */
 CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
   var sFlags = {}, lFlags = {}, args = [];
   for(var i = 0; i < paramArr.length; i++){
@@ -620,6 +632,14 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
   return { 'sFlags' : sFlags, 'lFlags' : lFlags, 'args' : args };
 };
 
+/**
+ * Registers a command so it can be tabbable and so that it can be called later
+ * @param  {string} name
+ * @param  {function} cmdFunc
+ * @param  {string} usage
+ * @param  {string} description
+ * @return {Command}
+ */
 CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
   this._tabCommandRegistry.push(name); 
   return this._commandRegistry[name] = new Command(cmdFunc, usage, description);
@@ -627,6 +647,13 @@ CLI.prototype.registerCommand = function(name, cmdFunc, usage, description) {
 
 // Routing-----------------------------
 
+/**
+ * Register a route so that if the route is navigated to, the webRoute will 
+ * show up in the url bar and the setup function will be called.
+ * @param  {string} unixRoute
+ * @param  {string} webRoute
+ * @param  {function} setup
+ */
 CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
   var currObj, splitRoute;
   splitRoute = unixRoute.split('/');
@@ -645,6 +672,11 @@ CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
   this._tabCommandRegistry.push(unixRoute);
 };
 
+/**
+ * Return whether the given route actually exists
+ * @param  {string} unixRoute
+ * @return {boolean}
+ */
 CLI.prototype._validateRoute = function(unixRoute) {
   var currObj, splitRoute;
   splitRoute = unixRoute.split('/');
@@ -660,9 +692,13 @@ CLI.prototype._validateRoute = function(unixRoute) {
   return true;
 };
 
+/**
+ * Calls the setup function of a route and changes the 
+ * url to match the route's webroute.
+ * @param  {string} unixRoute 
+ */
 CLI.prototype._navigateTo = function(unixRoute) {
-  var route;
-  route = this._getRouteObj(unixRoute).routeData;
+  var route = this._getRouteObj(unixRoute).routeData;
 
   if(route.setup)
     route.setup.call(this);
@@ -670,6 +706,11 @@ CLI.prototype._navigateTo = function(unixRoute) {
   window.history.pushState(null, null, route.webRoute);
 };
 
+/**
+ * Returns the route Object associated with a unix route
+ * @param  {string} routeStr 
+ * @return {Object}
+ */
 CLI.prototype._getRouteObj = function(routeStr) {
   var currObj, directories;
   directories = routeStr.split('/');
@@ -680,6 +721,15 @@ CLI.prototype._getRouteObj = function(routeStr) {
   return currObj;
 };
 
+/**
+ * Returns an array of unix route strings one level deeper from
+ * the prfxroute
+ * @param  {string} prfx          repeated prfx
+ * @param  {string} fullPrfxRoute the full unix route prefix
+ * @param  {Object} routeObj      route object
+ * @param  {int} prfxCount        The number of times prfx is supposed to repeat
+ * @return {string[]}               
+ */
 CLI.prototype._getRouteChildren = function(prfx, fullPrfxRoute, routeObj, prfxCount) {
   var routes, prfxRoute, currObj, repeatPrfx;
   repeatPrfx = prfx.repeat(prfxCount);
@@ -690,6 +740,14 @@ CLI.prototype._getRouteChildren = function(prfx, fullPrfxRoute, routeObj, prfxCo
   return routes || [];
 };
 
+/**
+ * Returns an array of route strings at most one level down 
+ * @param  {Object} routeObj 
+ * @param  {string[]} prfxArr  
+ * @param  {int} index    
+ * @param  {string} prfx     
+ * @return {string[]}          
+ */
 CLI.prototype._getValidRouteChildren = function(routeObj, prfxArr, index, prfx) {
   var possibles;
   possibles = [];
@@ -729,6 +787,15 @@ CLI.prototype._getValidRouteChildren = function(routeObj, prfxArr, index, prfx) 
 // Inner Classes
 //-----------------------------------------------------------------------------
 
+// Command 
+//-------------------------------------
+
+/**
+ * Class to represent a command
+ * @param {function} cmdFunc   function to be called when the command is run
+ * @param {string} usage       a desciprion of how to use the command
+ * @param {string} description a description of what the command does
+ */
 var Command = function(cmdFunc, usage, description){
   this.flags          = null;
   this.usage          = usage;
@@ -737,6 +804,11 @@ var Command = function(cmdFunc, usage, description){
   this.maxFlagNameLen = 0;
 };
 
+/**
+ * Registers flags with this command and sets the maxFlagNameLen for
+ * the command
+ * @param  {Flag[]} flagArr 
+ */
 Command.prototype.withFlags = function(flagArr) {
   this.flags = flagArr || [];
   this.flags.forEach(function(flag){
@@ -746,6 +818,11 @@ Command.prototype.withFlags = function(flagArr) {
   }.bind(this));
 };
 
+/**
+ * Returns whether or not a command has a certain flag registered to it
+ * @param  {string}  flagStr 
+ * @return {Boolean} 
+ */
 Command.prototype.hasFlag = function(flagStr) {
   if(!this.flags)
     return false;
@@ -755,6 +832,10 @@ Command.prototype.hasFlag = function(flagStr) {
   });
 };
 
+/**
+ * Returns a string representation of the command
+ * @return {string} 
+ */
 Command.prototype.toString = function() {
   var str = '';
   str += this.usage + '\n\n';
@@ -766,6 +847,15 @@ Command.prototype.toString = function() {
   return str;
 };
 
+// Flag 
+//-------------------------------------
+
+/**
+ * A class to represent a flag
+ * @param {string} short   
+ * @param {string} long        
+ * @param {string} description 
+ */
 var Flag = function(short, long, description){
   this.short       = short || '';
   this.long        = long || '';
@@ -773,6 +863,10 @@ var Flag = function(short, long, description){
   this.delim       = ' , ';
 };
 
+/**
+ * Returns the length of the base string representation of the flag
+ * @return {int} 
+ */
 Flag.prototype.length = function() {
   if(this.long && this.short){
     return this.short.length + this.long.length + this.delim.length; 
@@ -780,6 +874,11 @@ Flag.prototype.length = function() {
   return this.short.length || this.long.length;
 };
 
+/**
+ * Returns a string representation of the Flag optimized for pretty printing
+ * @param  {int} maxLen 
+ * @return {string}      
+ */
 Flag.prototype.toString = function(maxLen) {
   var str = '',
   pad = maxLen - this.length();
