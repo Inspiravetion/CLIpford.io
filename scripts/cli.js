@@ -64,7 +64,7 @@ Object.defineProperty(String.prototype, 'padFront', {
    * @return {string}
    */
   value: function(num, str){
-    str = str || '';
+    str = str || ' ';
     return str.repeat(num) + this;
   }
 });
@@ -78,7 +78,7 @@ Object.defineProperty(String.prototype, 'padBack', {
    * @return {string}
    */
   value: function(num, str){
-    str = str || '';
+    str = str || ' ';
     return this + str.repeat(num);
   }
 });
@@ -322,6 +322,14 @@ CLI.prototype._logStyle = function(msg, css) {
     this._editor.insert(ts.lDelim + css + ts.rDelim + msg);
 };
 
+/**
+ * Logs errors with a specific format and css style
+ * @param  {string} msg 
+ */
+CLI.prototype._logError = function(msg) {
+  this._log('ERROR: ' + msg, 'error');
+};
+
 // Key event handling------------------
 
 /**
@@ -443,7 +451,7 @@ CLI.prototype._tab = function() {
   }
   else if(possibles.length > 1){
     this._editor.moveCursorTo(this._currRow(), this._currLineLength());
-    this._prettyPrint(possibles);
+    this._prettyPrint(possibles, true);
     this._writePrompt();
     this._editor.insert(args.join(' '));
     this._editor.moveCursorTo(this._currRow(), pos.column);
@@ -543,30 +551,40 @@ CLI.prototype._replaceCommand = function(optCmd, optCol) {
  * Prints the array of strings in left aligned, equal length columns
  * @param  {string[]} argArr
  */
-CLI.prototype._prettyPrint = function(argArr) { 
-  var width, gutter, maxStrLen, colWidth, colCount, row;
+CLI.prototype._prettyPrint = function(argArr, newline) { 
+  var width, gutter, maxStrLen, colWidth, colCount, row, arg;
   maxStrLen = 0;
-  gutter    = '\t';
+  gutter    = '    ';
   width     = this._width();
   row       = '';
-  
-  argArr.forEach(function(str){
-    if(str.length > maxStrLen){
-      maxStrLen = str.length;
-    }
-  });
 
-  colCount = Math.floor(width / (maxStrLen + gutter.length));
+  if(newline)
+    this._log('');  
 
-  this._log('');
-  for(var i = 0; i < argArr.length; i++){
-    if(i != 0 && i % colCount == 0){ 
-      this._log(row, 'logging');
-      row = '';
+  if(width < argArr.join(gutter).length){
+
+    argArr.forEach(function(str){
+      if(str.length > maxStrLen){
+        maxStrLen = str.length;
+      }
+    });
+
+    colCount = Math.floor(width / (maxStrLen + gutter.length));
+
+    for(var i = 0; i < argArr.length; i++){
+      if(i != 0 && i % colCount == 0){ 
+        this._log(row, 'logging');
+        row = '';
+      }
+      arg = argArr[i].trim();
+      row += (arg.padBack(maxStrLen - arg.length) + gutter);
     }
-    row += argArr[i].padBack(maxStrLen - argArr[i].length) + gutter;
+
+    this._log(row, 'logging'); 
   }
-  this._log(row, 'logging'); 
+  else{
+    this._log(argArr.join(gutter), 'logging');
+  }
 };
 
 // Command handling--------------------
@@ -606,10 +624,7 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
         i++;
       } 
       else {
-        this._log(
-          'ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName,
-          'error'
-        );
+        this._logError('Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
         this._validCommand = false;
       }
     }
@@ -618,10 +633,7 @@ CLI.prototype._sortCommandParams = function(cmdName, paramArr) {
         sFlags[paramArr[i]] = true;
       } 
       else {
-        this._log(
-          'ERROR: Unknown flag ' + paramArr[i] + ' applied to ' + cmdName,
-          'error'
-        );
+        this._logError('Unknown flag ' + paramArr[i] + ' applied to ' + cmdName);
         this._validCommand = false;
       }
     } 
@@ -661,12 +673,17 @@ CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
   for(var i = 0; i < splitRoute.length; i++){
     currObj[splitRoute[i]] = currObj[splitRoute[i]] || {};
     currObj = currObj[splitRoute[i]];
-    currObj.routeData = { 'webRoute' : splitRoute[i], 'setup' : null };
+    currObj.routeData = currObj.routeData || { 
+      'webRoute' : splitRoute[i], 
+      'setup' : null,
+      'files' : null 
+    };
   }
 
   currObj.routeData = { 
     'webRoute' : webRoute, 
-    'setup' : setup 
+    'setup' : setup,
+    'files' : currObj.files || null 
   };
 
   this._tabCommandRegistry.push(unixRoute);
@@ -677,7 +694,7 @@ CLI.prototype.registerRoute = function(unixRoute, webRoute, setup) {
  * @param  {string} unixRoute
  * @return {boolean}
  */
-CLI.prototype._validateRoute = function(unixRoute) {
+CLI.prototype._validateRoute = function(unixRoute) { //CANNOT HANDLE RELATIVE PATHS
   var currObj, splitRoute;
   splitRoute = unixRoute.split('/');
   currObj = this._routeRegistry;
@@ -711,7 +728,7 @@ CLI.prototype._navigateTo = function(unixRoute) {
  * @param  {string} routeStr 
  * @return {Object}
  */
-CLI.prototype._getRouteObj = function(routeStr) {
+CLI.prototype._getRouteObj = function(routeStr) { //cannot handle relative routes
   var currObj, directories;
   directories = routeStr.split('/');
   currObj = this._routeRegistry;

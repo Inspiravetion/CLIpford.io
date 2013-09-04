@@ -1,3 +1,8 @@
+/**
+ * A class that acts as middleware for the ace editor renderer. If present, 
+ * it will take tokens that are given by the tokenizer and create styled tokens
+ * with custom css based off its deliminator settings
+ */
 var TokenStyler = function () {
   this.lDelim = '{{';
   this.rDelim = '}}';
@@ -6,6 +11,12 @@ var TokenStyler = function () {
   );
 }
 
+/**
+ * Takes a token and returns an array of custom styled tokens that were 
+ * subtokens of the original token.
+ * @param  {Object} token 
+ * @return {Object[]}       
+ */
 TokenStyler.prototype.extractStyleTokens = function(token) {
   var matchArr, innerTokens;
   innerTokens = [];
@@ -31,6 +42,10 @@ TokenStyler.prototype.extractStyleTokens = function(token) {
   return innerTokens;
 };
 
+/**
+ * Replaces unstyled tokens with styled tokens based on the deliminator settings
+ * @param  {Object} data 
+ */
 TokenStyler.prototype.styleTokens = function(data) {
   var tokens, styledTokens;
   tokens = data.tokens;

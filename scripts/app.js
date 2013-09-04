@@ -6,6 +6,13 @@ window.onload = function(){
   /* Echo */
   cli.registerCommand(
     'echo', 
+    /**
+     * [description]
+     * @param  {[type]} sFlgs [description]
+     * @param  {[type]} lFlgs [description]
+     * @param  {[type]} args  [description]
+     * @return {[type]}       [description]
+     */
     function(sFlgs, lFlgs, args){
       this._log(args.join(' '), 'logging');
     }, 
@@ -21,6 +28,13 @@ window.onload = function(){
   /* Clear */
   cli.registerCommand(
     'clear', 
+    /**
+     * [description]
+     * @param  {[type]} sFlgs [description]
+     * @param  {[type]} lFlgs [description]
+     * @param  {[type]} args  [description]
+     * @return {[type]}       [description]
+     */
     function(sFlgs, lFlgs, args){
       var totalRows, startRow;
       totalRows = this._totalVisibleRowCapacity();
@@ -39,6 +53,13 @@ window.onload = function(){
   /* Help */
   cli.registerCommand(
     'help', 
+    /**
+     * [description]
+     * @param  {[type]} sFlgs [description]
+     * @param  {[type]} lFlgs [description]
+     * @param  {[type]} args  [description]
+     * @return {[type]}       [description]
+     */
     function(sFlgs, lFlgs, args){
       if(args.length){
         args.forEach(function(cmd){
@@ -58,6 +79,13 @@ window.onload = function(){
   /* Cd */
   cli.registerCommand(
     'cd', 
+    /**
+     * [description]
+     * @param  {[type]} sFlgs [description]
+     * @param  {[type]} lFlgs [description]
+     * @param  {[type]} args  [description]
+     * @return {[type]}       [description]
+     */
     function(sFlgs, lFlgs, args){
       var newPath, currPath, success;
       currPath = this._route.split('/');
@@ -83,7 +111,7 @@ window.onload = function(){
           this._route = newPath;
         }
         else {
-          this._log('ERROR: You specified a path that does not exist', 'error');
+          this._logError('You specified a path that does not exist');
           return;
         }
       }
@@ -98,9 +126,39 @@ window.onload = function(){
   );
 
   /* Ls */
-  cli.registerCommand(
-    'ls', function(sFlgs, lFlgs, args){}, '', ''
-  );
+  cli.registerCommand( //CANT HANDLE RELATIVE PATHS!!!
+    'ls', 
+    /**
+     * List all of the files in the current routeObj
+     * @param  {Object} sFlgs 
+     * @param  {Object} lFlgs 
+     * @param  {Object} args  
+     */
+    function(sFlgs, lFlgs, args){
+      var route, files;
+      route = args[0] || this._route;
+
+      if(!this._validateRoute(route)){
+        this._logError('The specified directory does not exist');
+        return;
+      }
+
+      files = this._getRouteObj(route).routeData.files || []; 
+
+      if(sFlgs['-l']){
+        files.forEach(function(file){
+          this._log(file, 'logging');
+        }.bind(this));
+      }
+      else{
+        this._prettyPrint(files);
+      }
+    }, 
+    'ls <flag> [relative | absolute path]', 
+    'Lists all of the files in the current directory'
+  ).withFlags([ 
+    new Flag('-l', '', 'list the files vertically')
+  ]);
 
   /* Vim */
   cli.registerCommand(
@@ -120,7 +178,7 @@ window.onload = function(){
   //ROUTES---------------------------------------------------------------------
  
   cli.registerRoute(
-    '~/test/directory', 
+    '~/demos/Capsule', 
     'test',
     function(){
       console.log('route setup complete');
@@ -128,25 +186,19 @@ window.onload = function(){
   );
 
   cli.registerRoute(
-    '~/another/test/directory', 
+    '~/demos/Reac', 
     'test2',
     function(){
       console.log('route setup complete');
     }
   );
 
-  cli.registerRoute(
-    '~/test/something', 
-    'test3',
-    function(){
-      console.log('route setup complete');
-    }
-  );
+  //fake state-----------------------------------------------------------------
+   cli._getRouteObj('~').routeData.files = ['test.txt', 'Reac.rb', 'Capsule.js', 'asfasdfasdf.txt', 'asasdfasasdf.rb', 'asdf.txt', 'asasdfasddfsdf.sh'];
 
 
   /*
    * Notes:
    * 1.cli height must be divisible by virtual_renderer lineheight for smooth scrollTo(x,y) action
-   * 2.need to integrate color for easy recognition of prompt, user command, and logging
    */
 }
