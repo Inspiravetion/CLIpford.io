@@ -135,15 +135,17 @@ window.onload = function(){
      * @param  {Object} args  
      */
     function(sFlgs, lFlgs, args){
-      var route, files;
+      var route, files, routeObj;
       route = args[0] || this._route;
+      console.debug(String.prototype.beginsWith);
+      routeObj = this._getRouteObj(route);
 
-      if(!this._validateRoute(route)){
+      if(!routeObj){
         this._logError('The specified directory does not exist');
         return;
       }
 
-      files = this._getRouteObj(route).routeData.files || []; 
+      files = routeObj.routeData.files || []; 
 
       if(sFlgs['-l']){
         files.forEach(function(file){

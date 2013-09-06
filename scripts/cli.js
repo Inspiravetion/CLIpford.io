@@ -428,17 +428,23 @@ CLI.prototype._tab = function() {
     }
 
     routeObj  = this._getRouteObj(routeArr.join('/'));
-    possibles = possibles.concat(
-      this._getRouteChildren('../', prfxRoute, routeObj, backCount)
-    );
+
+    if(routeObj){
+      possibles = possibles.concat(
+        this._getRouteChildren('../', prfxRoute, routeObj, backCount)
+      );
+    }
   }
   else if(prfx.startsWith('.')){
     prfxRoute = (prfx != './' && prfx.endsWith('/')) ? 
       prfx.substr(0, prfx.length - 1) : (prfx == '.' ? '' : prfx);
     routeObj  = this._getRouteObj(this._route);
-    possibles = possibles.concat(
-      this._getRouteChildren('./', prfxRoute, routeObj, 1)
-    );
+
+    if(routeObj){
+      possibles = possibles.concat(
+        this._getRouteChildren('./', prfxRoute, routeObj, 1)
+      );
+    }
   }
 
   if(possibles.length == 1){
@@ -715,7 +721,13 @@ CLI.prototype._validateRoute = function(unixRoute) { //CANNOT HANDLE RELATIVE PA
  * @param  {string} unixRoute 
  */
 CLI.prototype._navigateTo = function(unixRoute) {
-  var route = this._getRouteObj(unixRoute).routeData;
+  var route;
+
+  if(!(route = this._getRouteObj(unixRoute))){
+    return;
+  }
+
+  route = route.routeData;
 
   if(route.setup)
     route.setup.call(this);
@@ -723,15 +735,61 @@ CLI.prototype._navigateTo = function(unixRoute) {
   window.history.pushState(null, null, route.webRoute);
 };
 
+CLI.prototype._toFullRoute = function(unixRoute) { //a recursive version would be more flexible
+  var currRoute, routeArr, fullRoute;
+  currRoute = this._route;
+
+  if(unixRoute.startsWith(this._rootDir)){
+    fullRoute = unixRoute;
+  }
+  else if(unixRoute.startsWith('..')){
+    routeArr = currRoute.split('/');
+    while(unixRoute.startsWith('..')){
+      routeArr.pop();
+
+      if(unixRoute == '..'){
+        unixRoute = '';
+      }
+      else{
+        unixRoute = unixRoute.substr(3);
+      }
+    }
+    fullRoute = routeArr.join('/') + '/' + unixRoute;
+  }
+  else if (unixRoute.startsWith('.')){
+    if (unixRoute.length == 1){
+      fullRoute = currRoute + '/' + unixRoute.substr(1); 
+    }
+    else if (unixRoute.startsWith('./')){
+      fullRoute = currRoute + '/' + unixRoute.substr(2);
+    }
+    else{
+      fullRoute = currRoute + '/' + unixRoute;      
+    }
+  }
+  else{
+    fullRoute = this._route + '/' + unixRoute;
+  }
+  return this._validateRoute(fullRoute) ? fullRoute : null; 
+};
+
 /**
  * Returns the route Object associated with a unix route
  * @param  {string} routeStr 
  * @return {Object}
  */
-CLI.prototype._getRouteObj = function(routeStr) { //cannot handle relative routes
+CLI.prototype._getRouteObj = function(routeStr) { //cannot handle relative routes charlie
   var currObj, directories;
-  directories = routeStr.split('/');
+  directories = this._toFullRoute(routeStr);
   currObj = this._routeRegistry;
+
+  if(directories){
+    directories = directories.split('/');
+  }
+  else{
+    return null;
+  }
+
   for(var i = 0; i < directories.length; i++){
     currObj = currObj[directories[i]];
   }
