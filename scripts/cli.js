@@ -735,6 +735,12 @@ CLI.prototype._navigateTo = function(unixRoute) {
   window.history.pushState(null, null, route.webRoute);
 };
 
+/**
+ * Takes any route and returns a full route for it if it is valid or null 
+ * otherwise
+ * @param  {string} unixRoute 
+ * @return {string} 
+ */
 CLI.prototype._toFullRoute = function(unixRoute) { //a recursive version would be more flexible
   var currRoute, routeArr, fullRoute;
   currRoute = this._route;
@@ -774,7 +780,8 @@ CLI.prototype._toFullRoute = function(unixRoute) { //a recursive version would b
 };
 
 /**
- * Returns the route Object associated with a unix route
+ * Returns the route Object associated with a unix route or null if the route is
+ * not valid
  * @param  {string} routeStr 
  * @return {Object}
  */
